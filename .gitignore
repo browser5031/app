@@ -73,6 +73,9 @@ agenthub/agents/youtube/db
 *.deb
 *.dylib
 
+# Gradle - Allow wrapper JAR (required for builds)
+!gradle/wrapper/gradle-wrapper.jar
+
 # Build caches
 .cache/
 
