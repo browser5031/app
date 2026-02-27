@@ -1,1 +1,27 @@
-<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <!-- Threat Level Colors -->\n    <color name=\"threat_green\">#4CAF50</color>\n    <color name=\"threat_yellow\">#FFC107</color>\n    <color name=\"threat_orange\">#FF9800</color>\n    <color name=\"threat_red\">#F44336</color>\n    \n    <!-- Primary Colors -->\n    <color name=\"primary_blue\">#1976D2</color>\n    <color name=\"primary_dark_blue\">#1565C0</color>\n    <color name=\"primary_light_blue\">#42A5F5</color>\n    \n    <!-- Secondary Colors -->\n    <color name=\"secondary_teal\">#00897B</color>\n    <color name=\"secondary_light_teal\">#26A69A</color>\n    \n    <!-- Neutral Colors -->\n    <color name=\"white\">#FFFFFF</color>\n    <color name=\"black\">#000000</color>\n    <color name=\"gray_light\">#F5F5F5</color>\n    <color name=\"gray_medium\">#BDBDBD</color>\n    <color name=\"gray_dark\">#424242</color>\n</resources>\n
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Icon Launcher Background -->
+    <color name="ic_launcher_background">#4CAF50</color>
+    
+    <!-- Threat Level Colors -->
+    <color name="threat_green">#4CAF50</color>
+    <color name="threat_yellow">#FFC107</color>
+    <color name="threat_orange">#FF9800</color>
+    <color name="threat_red">#F44336</color>
+    
+    <!-- Primary Colors -->
+    <color name="primary_blue">#1976D2</color>
+    <color name="primary_dark_blue">#1565C0</color>
+    <color name="primary_light_blue">#42A5F5</color>
+    
+    <!-- Secondary Colors -->
+    <color name="secondary_teal">#00897B</color>
+    <color name="secondary_light_teal">#26A69A</color>
+    
+    <!-- Neutral Colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="gray_light">#F5F5F5</color>
+    <color name="gray_medium">#BDBDBD</color>
+    <color name="gray_dark">#424242</color>
+</resources>\n
