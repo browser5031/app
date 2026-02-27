@@ -67,8 +67,7 @@ dependencies {
     // Jetpack Navigation
     implementation("androidx.navigation:navigation-compose:2.7.6")
 
-    // Telephony
-    implementation("androidx.telephony:telephony:1.0.0-alpha05")
+    // Telephony APIs are built into Android SDK (no separate dependency needed)
 
     // Location
     implementation("com.google.android.gms:play-services-location:21.1.0")
