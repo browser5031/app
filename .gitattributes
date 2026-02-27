@@ -1,0 +1,6 @@
+# Gradle Wrapper - treat as binary and always include
+gradle/wrapper/gradle-wrapper.jar binary
+*.jar binary
+
+# Ensure wrapper jar is never treated as text
+gradle-wrapper.jar -text -diff
