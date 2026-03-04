@@ -1,1 +1,410 @@
-package com.imsidetector.data\n\nimport io.realm.kotlin.Realm\nimport io.realm.kotlin.ext.query\nimport io.realm.kotlin.query.Sort\nimport kotlinx.coroutines.Dispatchers\nimport kotlinx.coroutines.withContext\nimport org.mongodb.kson.ObjectId\nimport timber.log.Timber\n\n/**\n * Repository for database operations using Realm.\n * Handles all persistence operations for cell records, threat events, and baselines.\n */\nclass DatabaseRepository {\n    \n    private lateinit var realm: Realm\n    \n    /**\n     * Initialize database connection.\n     */\n    suspend fun initialize() = withContext(Dispatchers.IO) {\n        try {\n            realm = Realm.open()\n            Timber.d(\"Database initialized successfully\")\n        } catch (e: Exception) {\n            Timber.e(e, \"Failed to initialize database\")\n            throw e\n        }\n    }\n    \n    /**\n     * Close database connection.\n     */\n    suspend fun close() = withContext(Dispatchers.IO) {\n        try {\n            realm.close()\n            Timber.d(\"Database closed\")\n        } catch (e: Exception) {\n            Timber.e(e, \"Error closing database\")\n        }\n    }\n    \n    // ==================== Cell Tower Records ====================\n    \n    /**\n     * Insert or update cell tower record.\n     */\n    suspend fun insertCellTowerRecord(record: CellTowerRecord) = withContext(Dispatchers.IO) {\n        try {\n            realm.write {\n                copyToRealm(record)\n            }\n            Timber.d(\"Cell tower record inserted: LAC=${record.lac}, TAC=${record.tac}, CID=${record.cid}\")\n        } catch (e: Exception) {\n            Timber.e(e, \"Error inserting cell tower record\")\n        }\n    }\n    \n    /**\n     * Get all cell tower records.\n     */\n    suspend fun getAllCellTowerRecords(): List<CellTowerRecord> = withContext(Dispatchers.IO) {\n        return@withContext try {\n            realm.query<CellTowerRecord>()\n                .sort(\"timestamp\", Sort.DESCENDING)\n                .find()\n                .toList()\n        } catch (e: Exception) {\n            Timber.e(e, \"Error retrieving cell tower records\")\n            emptyList()\n        }\n    }\n    \n    /**\n     * Get recent cell tower records.\n     */\n    suspend fun getRecentCellTowerRecords(limit: Int = 100): List<CellTowerRecord> = withContext(Dispatchers.IO) {\n        return@withContext try {\n            realm.query<CellTowerRecord>()\n                .sort(\"timestamp\", Sort.DESCENDING)\n                .limit(limit)\n                .find()\n                .toList()\n        } catch (e: Exception) {\n            Timber.e(e, \"Error retrieving recent cell tower records\")\n            emptyList()\n        }\n    }\n    \n    /**\n     * Get cell tower records for a specific time range.\n     */\n    suspend fun getCellTowerRecordsByTimeRange(\n        startTime: Long,\n        endTime: Long\n    ): List<CellTowerRecord> = withContext(Dispatchers.IO) {\n        return@withContext try {\n            realm.query<CellTowerRecord>(\"timestamp >= $0 AND timestamp <= $1\", startTime, endTime)\n                .sort(\"timestamp\", Sort.DESCENDING)\n                .find()\n                .toList()\n        } catch (e: Exception) {\n            Timber.e(e, \"Error retrieving cell tower records by time range\")\n            emptyList()\n        }\n    }\n    \n    /**\n     * Get cell tower records for a specific LAC/TAC.\n     */\n    suspend fun getCellTowerRecordsByLacTac(lac: Int, tac: Int): List<CellTowerRecord> = withContext(Dispatchers.IO) {\n        return@withContext try {\n            realm.query<CellTowerRecord>(\"lac == $0 AND tac == $1\", lac, tac)\n                .sort(\"timestamp\", Sort.DESCENDING)\n                .find()\n                .toList()\n        } catch (e: Exception) {\n            Timber.e(e, \"Error retrieving cell tower records by LAC/TAC\")\n            emptyList()\n        }\n    }\n    \n    /**\n     * Delete old cell tower records (cleanup).\n     */\n    suspend fun deleteOldCellTowerRecords(olderThanMillis: Long) = withContext(Dispatchers.IO) {\n        try {\n            val cutoffTime = System.currentTimeMillis() - olderThanMillis\n            realm.write {\n                val oldRecords = query<CellTowerRecord>(\"timestamp < $0\", cutoffTime).find()\n                delete(oldRecords)\n                Timber.d(\"Deleted ${oldRecords.size} old cell tower records\")\n            }\n        } catch (e: Exception) {\n            Timber.e(e, \"Error deleting old cell tower records\")\n        }\n    }\n    \n    // ==================== Threat Events ====================\n    \n    /**\n     * Insert threat event.\n     */\n    suspend fun insertThreatEvent(event: ThreatEvent) = withContext(Dispatchers.IO) {\n        try {\n            realm.write {\n                copyToRealm(event)\n            }\n            Timber.d(\"Threat event inserted: Type=${event.threatType}, Severity=${event.severity}\")\n        } catch (e: Exception) {\n            Timber.e(e, \"Error inserting threat event\")\n        }\n    }\n    \n    /**\n     * Get all threat events.\n     */\n    suspend fun getAllThreatEvents(): List<ThreatEvent> = withContext(Dispatchers.IO) {\n        return@withContext try {\n            realm.query<ThreatEvent>()\n                .sort(\"timestamp\", Sort.DESCENDING)\n                .find()\n                .toList()\n        } catch (e: Exception) {\n            Timber.e(e, \"Error retrieving threat events\")\n            emptyList()\n        }\n    }\n    \n    /**\n     * Get recent threat events.\n     */\n    suspend fun getRecentThreatEvents(limit: Int = 50): List<ThreatEvent> = withContext(Dispatchers.IO) {\n        return@withContext try {\n            realm.query<ThreatEvent>()\n                .sort(\"timestamp\", Sort.DESCENDING)\n                .limit(limit)\n                .find()\n                .toList()\n        } catch (e: Exception) {\n            Timber.e(e, \"Error retrieving recent threat events\")\n            emptyList()\n        }\n    }\n    \n    /**\n     * Get threat events by severity level.\n     */\n    suspend fun getThreatEventsBySeverity(minSeverity: Int): List<ThreatEvent> = withContext(Dispatchers.IO) {\n        return@withContext try {\n            realm.query<ThreatEvent>(\"severity >= $0\", minSeverity)\n                .sort(\"timestamp\", Sort.DESCENDING)\n                .find()\n                .toList()\n        } catch (e: Exception) {\n            Timber.e(e, \"Error retrieving threat events by severity\")\n            emptyList()\n        }\n    }\n    \n    /**\n     * Get threat events by type.\n     */\n    suspend fun getThreatEventsByType(threatType: String): List<ThreatEvent> = withContext(Dispatchers.IO) {\n        return@withContext try {\n            realm.query<ThreatEvent>(\"threatType == $0\", threatType)\n                .sort(\"timestamp\", Sort.DESCENDING)\n                .find()\n                .toList()\n        } catch (e: Exception) {\n            Timber.e(e, \"Error retrieving threat events by type\")\n            emptyList()\n        }\n    }\n    \n    /**\n     * Delete old threat events (cleanup).\n     */\n    suspend fun deleteOldThreatEvents(olderThanMillis: Long) = withContext(Dispatchers.IO) {\n        try {\n            val cutoffTime = System.currentTimeMillis() - olderThanMillis\n            realm.write {\n                val oldEvents = query<ThreatEvent>(\"timestamp < $0\", cutoffTime).find()\n                delete(oldEvents)\n                Timber.d(\"Deleted ${oldEvents.size} old threat events\")\n            }\n        } catch (e: Exception) {\n            Timber.e(e, \"Error deleting old threat events\")\n        }\n    }\n    \n    // ==================== SMS Logs ====================\n    \n    /**\n     * Insert SMS log.\n     */\n    suspend fun insertSMSLog(smsLog: SMSLog) = withContext(Dispatchers.IO) {\n        try {\n            realm.write {\n                copyToRealm(smsLog)\n            }\n            Timber.d(\"SMS log inserted: From=${smsLog.sender}, Classification=${smsLog.classification}\")\n        } catch (e: Exception) {\n            Timber.e(e, \"Error inserting SMS log\")\n        }\n    }\n    \n    /**\n     * Get suspicious SMS logs.\n     */\n    suspend fun getSuspiciousSMSLogs(): List<SMSLog> = withContext(Dispatchers.IO) {\n        return@withContext try {\n            realm.query<SMSLog>(\"classification != $0\", \"NORMAL\")\n                .sort(\"timestamp\", Sort.DESCENDING)\n                .find()\n                .toList()\n        } catch (e: Exception) {\n            Timber.e(e, \"Error retrieving suspicious SMS logs\")\n            emptyList()\n        }\n    }\n    \n    /**\n     * Get silent SMS logs.\n     */\n    suspend fun getSilentSMSLogs(): List<SMSLog> = withContext(Dispatchers.IO) {\n        return@withContext try {\n            realm.query<SMSLog>(\"messageClass == $0\", 0)\n                .sort(\"timestamp\", Sort.DESCENDING)\n                .find()\n                .toList()\n        } catch (e: Exception) {\n            Timber.e(e, \"Error retrieving silent SMS logs\")\n            emptyList()\n        }\n    }\n    \n    /**\n     * Delete old SMS logs (cleanup).\n     */\n    suspend fun deleteOldSMSLogs(olderThanMillis: Long) = withContext(Dispatchers.IO) {\n        try {\n            val cutoffTime = System.currentTimeMillis() - olderThanMillis\n            realm.write {\n                val oldLogs = query<SMSLog>(\"timestamp < $0\", cutoffTime).find()\n                delete(oldLogs)\n                Timber.d(\"Deleted ${oldLogs.size} old SMS logs\")\n            }\n        } catch (e: Exception) {\n            Timber.e(e, \"Error deleting old SMS logs\")\n        }\n    }\n    \n    // ==================== Baseline Profiles ====================\n    \n    /**\n     * Insert or update baseline profile.\n     */\n    suspend fun insertBaselineProfile(profile: BaselineProfile) = withContext(Dispatchers.IO) {\n        try {\n            realm.write {\n                copyToRealm(profile)\n            }\n            Timber.d(\"Baseline profile inserted: Location=${profile.locationName}\")\n        } catch (e: Exception) {\n            Timber.e(e, \"Error inserting baseline profile\")\n        }\n    }\n    \n    /**\n     * Get all baseline profiles.\n     */\n    suspend fun getAllBaselineProfiles(): List<BaselineProfile> = withContext(Dispatchers.IO) {\n        return@withContext try {\n            realm.query<BaselineProfile>()\n                .sort(\"updatedAt\", Sort.DESCENDING)\n                .find()\n                .toList()\n        } catch (e: Exception) {\n            Timber.e(e, \"Error retrieving baseline profiles\")\n            emptyList()\n        }\n    }\n    \n    /**\n     * Get baseline profile by location name.\n     */\n    suspend fun getBaselineProfileByLocation(locationName: String): BaselineProfile? = withContext(Dispatchers.IO) {\n        return@withContext try {\n            realm.query<BaselineProfile>(\"locationName == $0\", locationName)\n                .first()\n                .find()\n        } catch (e: Exception) {\n            Timber.e(e, \"Error retrieving baseline profile by location\")\n            null\n        }\n    }\n    \n    /**\n     * Delete baseline profile.\n     */\n    suspend fun deleteBaselineProfile(id: ObjectId) = withContext(Dispatchers.IO) {\n        try {\n            realm.write {\n                val profile = query<BaselineProfile>(\"id == $0\", id).first().find()\n                if (profile != null) {\n                    delete(profile)\n                    Timber.d(\"Baseline profile deleted\")\n                }\n            }\n        } catch (e: Exception) {\n            Timber.e(e, \"Error deleting baseline profile\")\n        }\n    }\n    \n    // ==================== Statistics ====================\n    \n    /**\n     * Get database statistics.\n     */\n    suspend fun getDatabaseStatistics(): DatabaseStatistics = withContext(Dispatchers.IO) {\n        return@withContext try {\n            val cellRecordCount = realm.query<CellTowerRecord>().count().find()\n            val threatEventCount = realm.query<ThreatEvent>().count().find()\n            val smsLogCount = realm.query<SMSLog>().count().find()\n            val baselineProfileCount = realm.query<BaselineProfile>().count().find()\n            \n            val recentThreats = realm.query<ThreatEvent>()\n                .sort(\"timestamp\", Sort.DESCENDING)\n                .limit(1)\n                .find()\n                .toList()\n            \n            DatabaseStatistics(\n                cellTowerRecordCount = cellRecordCount.toInt(),\n                threatEventCount = threatEventCount.toInt(),\n                smsLogCount = smsLogCount.toInt(),\n                baselineProfileCount = baselineProfileCount.toInt(),\n                lastThreatTime = recentThreats.firstOrNull()?.timestamp ?: 0\n            )\n        } catch (e: Exception) {\n            Timber.e(e, \"Error retrieving database statistics\")\n            DatabaseStatistics()\n        }\n    }\n    \n    /**\n     * Clear all data (factory reset).\n     */\n    suspend fun clearAllData() = withContext(Dispatchers.IO) {\n        try {\n            realm.write {\n                deleteAll()\n            }\n            Timber.d(\"All data cleared\")\n        } catch (e: Exception) {\n            Timber.e(e, \"Error clearing all data\")\n        }\n    }\n}\n\ndata class DatabaseStatistics(\n    val cellTowerRecordCount: Int = 0,\n    val threatEventCount: Int = 0,\n    val smsLogCount: Int = 0,\n    val baselineProfileCount: Int = 0,\n    val lastThreatTime: Long = 0\n)\n
+package com.imsidetector.data
+
+import io.realm.kotlin.Realm
+import io.realm.kotlin.ext.query
+import io.realm.kotlin.query.Sort
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.mongodb.kson.ObjectId
+import timber.log.Timber
+
+/**
+ * Repository for database operations using Realm.
+ * Handles all persistence operations for cell records, threat events, and baselines.
+ */
+class DatabaseRepository {
+    
+    private lateinit var realm: Realm
+    
+    /**
+     * Initialize database connection.
+     */
+    suspend fun initialize() = withContext(Dispatchers.IO) {
+        try {
+            realm = Realm.open()
+            Timber.d(\"Database initialized successfully\")
+        } catch (e: Exception) {
+            Timber.e(e, \"Failed to initialize database\")
+            throw e
+        }
+    }
+    
+    /**
+     * Close database connection.
+     */
+    suspend fun close() = withContext(Dispatchers.IO) {
+        try {
+            realm.close()
+            Timber.d(\"Database closed\")
+        } catch (e: Exception) {
+            Timber.e(e, \"Error closing database\")
+        }
+    }
+    
+    // ==================== Cell Tower Records ====================
+    
+    /**
+     * Insert or update cell tower record.
+     */
+    suspend fun insertCellTowerRecord(record: CellTowerRecord) = withContext(Dispatchers.IO) {
+        try {
+            realm.write {
+                copyToRealm(record)
+            }
+            Timber.d(\"Cell tower record inserted: LAC=${record.lac}, TAC=${record.tac}, CID=${record.cid}\")
+        } catch (e: Exception) {
+            Timber.e(e, \"Error inserting cell tower record\")
+        }
+    }
+    
+    /**
+     * Get all cell tower records.
+     */
+    suspend fun getAllCellTowerRecords(): List<CellTowerRecord> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            realm.query<CellTowerRecord>()
+                .sort(\"timestamp\", Sort.DESCENDING)
+                .find()
+                .toList()
+        } catch (e: Exception) {
+            Timber.e(e, \"Error retrieving cell tower records\")
+            emptyList()
+        }
+    }
+    
+    /**
+     * Get recent cell tower records.
+     */
+    suspend fun getRecentCellTowerRecords(limit: Int = 100): List<CellTowerRecord> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            realm.query<CellTowerRecord>()
+                .sort(\"timestamp\", Sort.DESCENDING)
+                .limit(limit)
+                .find()
+                .toList()
+        } catch (e: Exception) {
+            Timber.e(e, \"Error retrieving recent cell tower records\")
+            emptyList()
+        }
+    }
+    
+    /**
+     * Get cell tower records for a specific time range.
+     */
+    suspend fun getCellTowerRecordsByTimeRange(
+        startTime: Long,
+        endTime: Long
+    ): List<CellTowerRecord> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            realm.query<CellTowerRecord>(\"timestamp >= $0 AND timestamp <= $1\", startTime, endTime)
+                .sort(\"timestamp\", Sort.DESCENDING)
+                .find()
+                .toList()
+        } catch (e: Exception) {
+            Timber.e(e, \"Error retrieving cell tower records by time range\")
+            emptyList()
+        }
+    }
+    
+    /**
+     * Get cell tower records for a specific LAC/TAC.
+     */
+    suspend fun getCellTowerRecordsByLacTac(lac: Int, tac: Int): List<CellTowerRecord> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            realm.query<CellTowerRecord>(\"lac == $0 AND tac == $1\", lac, tac)
+                .sort(\"timestamp\", Sort.DESCENDING)
+                .find()
+                .toList()
+        } catch (e: Exception) {
+            Timber.e(e, \"Error retrieving cell tower records by LAC/TAC\")
+            emptyList()
+        }
+    }
+    
+    /**
+     * Delete old cell tower records (cleanup).
+     */
+    suspend fun deleteOldCellTowerRecords(olderThanMillis: Long) = withContext(Dispatchers.IO) {
+        try {
+            val cutoffTime = System.currentTimeMillis() - olderThanMillis
+            realm.write {
+                val oldRecords = query<CellTowerRecord>(\"timestamp < $0\", cutoffTime).find()
+                delete(oldRecords)
+                Timber.d(\"Deleted ${oldRecords.size} old cell tower records\")
+            }
+        } catch (e: Exception) {
+            Timber.e(e, \"Error deleting old cell tower records\")
+        }
+    }
+    
+    // ==================== Threat Events ====================
+    
+    /**
+     * Insert threat event.
+     */
+    suspend fun insertThreatEvent(event: ThreatEvent) = withContext(Dispatchers.IO) {
+        try {
+            realm.write {
+                copyToRealm(event)
+            }
+            Timber.d(\"Threat event inserted: Type=${event.threatType}, Severity=${event.severity}\")
+        } catch (e: Exception) {
+            Timber.e(e, \"Error inserting threat event\")
+        }
+    }
+    
+    /**
+     * Get all threat events.
+     */
+    suspend fun getAllThreatEvents(): List<ThreatEvent> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            realm.query<ThreatEvent>()
+                .sort(\"timestamp\", Sort.DESCENDING)
+                .find()
+                .toList()
+        } catch (e: Exception) {
+            Timber.e(e, \"Error retrieving threat events\")
+            emptyList()
+        }
+    }
+    
+    /**
+     * Get recent threat events.
+     */
+    suspend fun getRecentThreatEvents(limit: Int = 50): List<ThreatEvent> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            realm.query<ThreatEvent>()
+                .sort(\"timestamp\", Sort.DESCENDING)
+                .limit(limit)
+                .find()
+                .toList()
+        } catch (e: Exception) {
+            Timber.e(e, \"Error retrieving recent threat events\")
+            emptyList()
+        }
+    }
+    
+    /**
+     * Get threat events by severity level.
+     */
+    suspend fun getThreatEventsBySeverity(minSeverity: Int): List<ThreatEvent> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            realm.query<ThreatEvent>(\"severity >= $0\", minSeverity)
+                .sort(\"timestamp\", Sort.DESCENDING)
+                .find()
+                .toList()
+        } catch (e: Exception) {
+            Timber.e(e, \"Error retrieving threat events by severity\")
+            emptyList()
+        }
+    }
+    
+    /**
+     * Get threat events by type.
+     */
+    suspend fun getThreatEventsByType(threatType: String): List<ThreatEvent> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            realm.query<ThreatEvent>(\"threatType == $0\", threatType)
+                .sort(\"timestamp\", Sort.DESCENDING)
+                .find()
+                .toList()
+        } catch (e: Exception) {
+            Timber.e(e, \"Error retrieving threat events by type\")
+            emptyList()
+        }
+    }
+    
+    /**
+     * Delete old threat events (cleanup).
+     */
+    suspend fun deleteOldThreatEvents(olderThanMillis: Long) = withContext(Dispatchers.IO) {
+        try {
+            val cutoffTime = System.currentTimeMillis() - olderThanMillis
+            realm.write {
+                val oldEvents = query<ThreatEvent>(\"timestamp < $0\", cutoffTime).find()
+                delete(oldEvents)
+                Timber.d(\"Deleted ${oldEvents.size} old threat events\")
+            }
+        } catch (e: Exception) {
+            Timber.e(e, \"Error deleting old threat events\")
+        }
+    }
+    
+    // ==================== SMS Logs ====================
+    
+    /**
+     * Insert SMS log.
+     */
+    suspend fun insertSMSLog(smsLog: SMSLog) = withContext(Dispatchers.IO) {
+        try {
+            realm.write {
+                copyToRealm(smsLog)
+            }
+            Timber.d(\"SMS log inserted: From=${smsLog.sender}, Classification=${smsLog.classification}\")
+        } catch (e: Exception) {
+            Timber.e(e, \"Error inserting SMS log\")
+        }
+    }
+    
+    /**
+     * Get suspicious SMS logs.
+     */
+    suspend fun getSuspiciousSMSLogs(): List<SMSLog> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            realm.query<SMSLog>(\"classification != $0\", \"NORMAL\")
+                .sort(\"timestamp\", Sort.DESCENDING)
+                .find()
+                .toList()
+        } catch (e: Exception) {
+            Timber.e(e, \"Error retrieving suspicious SMS logs\")
+            emptyList()
+        }
+    }
+    
+    /**
+     * Get silent SMS logs.
+     */
+    suspend fun getSilentSMSLogs(): List<SMSLog> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            realm.query<SMSLog>(\"messageClass == $0\", 0)
+                .sort(\"timestamp\", Sort.DESCENDING)
+                .find()
+                .toList()
+        } catch (e: Exception) {
+            Timber.e(e, \"Error retrieving silent SMS logs\")
+            emptyList()
+        }
+    }
+    
+    /**
+     * Delete old SMS logs (cleanup).
+     */
+    suspend fun deleteOldSMSLogs(olderThanMillis: Long) = withContext(Dispatchers.IO) {
+        try {
+            val cutoffTime = System.currentTimeMillis() - olderThanMillis
+            realm.write {
+                val oldLogs = query<SMSLog>(\"timestamp < $0\", cutoffTime).find()
+                delete(oldLogs)
+                Timber.d(\"Deleted ${oldLogs.size} old SMS logs\")
+            }
+        } catch (e: Exception) {
+            Timber.e(e, \"Error deleting old SMS logs\")
+        }
+    }
+    
+    // ==================== Baseline Profiles ====================
+    
+    /**
+     * Insert or update baseline profile.
+     */
+    suspend fun insertBaselineProfile(profile: BaselineProfile) = withContext(Dispatchers.IO) {
+        try {
+            realm.write {
+                copyToRealm(profile)
+            }
+            Timber.d(\"Baseline profile inserted: Location=${profile.locationName}\")
+        } catch (e: Exception) {
+            Timber.e(e, \"Error inserting baseline profile\")
+        }
+    }
+    
+    /**
+     * Get all baseline profiles.
+     */
+    suspend fun getAllBaselineProfiles(): List<BaselineProfile> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            realm.query<BaselineProfile>()
+                .sort(\"updatedAt\", Sort.DESCENDING)
+                .find()
+                .toList()
+        } catch (e: Exception) {
+            Timber.e(e, \"Error retrieving baseline profiles\")
+            emptyList()
+        }
+    }
+    
+    /**
+     * Get baseline profile by location name.
+     */
+    suspend fun getBaselineProfileByLocation(locationName: String): BaselineProfile? = withContext(Dispatchers.IO) {
+        return@withContext try {
+            realm.query<BaselineProfile>(\"locationName == $0\", locationName)
+                .first()
+                .find()
+        } catch (e: Exception) {
+            Timber.e(e, \"Error retrieving baseline profile by location\")
+            null
+        }
+    }
+    
+    /**
+     * Delete baseline profile.
+     */
+    suspend fun deleteBaselineProfile(id: ObjectId) = withContext(Dispatchers.IO) {
+        try {
+            realm.write {
+                val profile = query<BaselineProfile>(\"id == $0\", id).first().find()
+                if (profile != null) {
+                    delete(profile)
+                    Timber.d(\"Baseline profile deleted\")
+                }
+            }
+        } catch (e: Exception) {
+            Timber.e(e, \"Error deleting baseline profile\")
+        }
+    }
+    
+    // ==================== Statistics ====================
+    
+    /**
+     * Get database statistics.
+     */
+    suspend fun getDatabaseStatistics(): DatabaseStatistics = withContext(Dispatchers.IO) {
+        return@withContext try {
+            val cellRecordCount = realm.query<CellTowerRecord>().count().find()
+            val threatEventCount = realm.query<ThreatEvent>().count().find()
+            val smsLogCount = realm.query<SMSLog>().count().find()
+            val baselineProfileCount = realm.query<BaselineProfile>().count().find()
+            
+            val recentThreats = realm.query<ThreatEvent>()
+                .sort(\"timestamp\", Sort.DESCENDING)
+                .limit(1)
+                .find()
+                .toList()
+            
+            DatabaseStatistics(
+                cellTowerRecordCount = cellRecordCount.toInt(),
+                threatEventCount = threatEventCount.toInt(),
+                smsLogCount = smsLogCount.toInt(),
+                baselineProfileCount = baselineProfileCount.toInt(),
+                lastThreatTime = recentThreats.firstOrNull()?.timestamp ?: 0
+            )
+        } catch (e: Exception) {
+            Timber.e(e, \"Error retrieving database statistics\")
+            DatabaseStatistics()
+        }
+    }
+    
+    /**
+     * Clear all data (factory reset).
+     */
+    suspend fun clearAllData() = withContext(Dispatchers.IO) {
+        try {
+            realm.write {
+                deleteAll()
+            }
+            Timber.d(\"All data cleared\")
+        } catch (e: Exception) {
+            Timber.e(e, \"Error clearing all data\")
+        }
+    }
+}
+
+data class DatabaseStatistics(
+    val cellTowerRecordCount: Int = 0,
+    val threatEventCount: Int = 0,
+    val smsLogCount: Int = 0,
+    val baselineProfileCount: Int = 0,
+    val lastThreatTime: Long = 0
+)
+

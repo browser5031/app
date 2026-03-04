@@ -1,1 +1,118 @@
-package com.imsidetector.service\n\nimport android.content.BroadcastReceiver\nimport android.content.Context\nimport android.content.Intent\nimport android.provider.Telephony\nimport android.telephony.SmsMessage\nimport timber.log.Timber\n\n/**\n * Broadcast receiver for monitoring incoming SMS messages.\n * Detects silent SMS (Class 0), WAP Push, and other suspicious messages.\n */\nclass SMSReceiver : BroadcastReceiver() {\n    \n    override fun onReceive(context: Context?, intent: Intent?) {\n        if (intent?.action == Telephony.Sms.Intents.SMS_RECEIVED_ACTION) {\n            val bundle = intent.extras\n            \n            try {\n                // Extract SMS messages from intent\n                val pdus = bundle?.get(\"pdus\") as? Array<*>\n                if (pdus != null) {\n                    for (pdu in pdus) {\n                        val smsMessage = SmsMessage.createFromPdu(pdu as ByteArray)\n                        processSMS(context, smsMessage)\n                    }\n                }\n            } catch (e: Exception) {\n                Timber.e(e, \"Error processing SMS\")\n            }\n        }\n    }\n    \n    /**\n     * Process individual SMS message for threats.\n     */\n    private fun processSMS(context: Context?, smsMessage: SmsMessage) {\n        val sender = smsMessage.originatingAddress ?: \"Unknown\"\n        val body = smsMessage.messageBody ?: \"\"\n        val timestamp = smsMessage.timestampMillis\n        \n        // Check for silent SMS (Class 0)\n        val messageClass = smsMessage.messageClass\n        val isSilentSMS = messageClass == SmsMessage.MessageClass.CLASS_0\n        \n        // Check for WAP Push\n        val isWapPush = body.contains(\"http://\") || body.contains(\"https://\")\n        \n        // Check for suspicious patterns\n        val isSuspicious = detectSuspiciousPatterns(body)\n        \n        if (isSilentSMS || isWapPush || isSuspicious) {\n            Timber.w(\n                \"Suspicious SMS detected - From: $sender, Silent: $isSilentSMS, \" +\n                \"WapPush: $isWapPush, Suspicious: $isSuspicious\"\n            )\n            \n            // TODO: Store in database\n            // TODO: Trigger alert notification\n            // TODO: Broadcast to UI\n            \n            // For now, log the event\n            logSuspiciousSMS(sender, body, isSilentSMS, isWapPush)\n        }\n    }\n    \n    /**\n     * Detect suspicious SMS patterns.\n     */\n    private fun detectSuspiciousPatterns(body: String): Boolean {\n        // Empty body is suspicious\n        if (body.isEmpty()) return true\n        \n        // Check for common malicious patterns\n        val suspiciousPatterns = listOf(\n            \"USSD\",\n            \"*#\",\n            \"##\",\n            \"AT+\",\n            \"IMEI\",\n            \"IMSI\",\n            \"SIM\",\n            \"LOCATION\"\n        )\n        \n        return suspiciousPatterns.any { body.contains(it, ignoreCase = true) }\n    }\n    \n    /**\n     * Log suspicious SMS for analysis.\n     */\n    private fun logSuspiciousSMS(\n        sender: String,\n        body: String,\n        isSilentSMS: Boolean,\n        isWapPush: Boolean\n    ) {\n        Timber.d(\n            \"SMS Log - From: $sender, Body: ${body.take(50)}..., \" +\n            \"Silent: $isSilentSMS, WapPush: $isWapPush\"\n        )\n        \n        // TODO: Store in Realm database\n        // val smsLog = SMSLog(\n        //     sender = sender,\n        //     content = body,\n        //     classification = when {\n        //         isSilentSMS -> \"SILENT_SMS\"\n        //         isWapPush -> \"WAP_PUSH\"\n        //         else -> \"SUSPICIOUS\"\n        //     },\n        //     messageClass = if (isSilentSMS) 0 else -1\n        // )\n        // database.insertSMSLog(smsLog)\n    }\n}\n
+package com.imsidetector.service
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.provider.Telephony
+import android.telephony.SmsMessage
+import timber.log.Timber
+
+/**
+ * Broadcast receiver for monitoring incoming SMS messages.
+ * Detects silent SMS (Class 0), WAP Push, and other suspicious messages.
+ */
+class SMSReceiver : BroadcastReceiver() {
+    
+    override fun onReceive(context: Context?, intent: Intent?) {
+        if (intent?.action == Telephony.Sms.Intents.SMS_RECEIVED_ACTION) {
+            val bundle = intent.extras
+            
+            try {
+                // Extract SMS messages from intent
+                val pdus = bundle?.get(\"pdus\") as? Array<*>
+                if (pdus != null) {
+                    for (pdu in pdus) {
+                        val smsMessage = SmsMessage.createFromPdu(pdu as ByteArray)
+                        processSMS(context, smsMessage)
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.e(e, \"Error processing SMS\")
+            }
+        }
+    }
+    
+    /**
+     * Process individual SMS message for threats.
+     */
+    private fun processSMS(context: Context?, smsMessage: SmsMessage) {
+        val sender = smsMessage.originatingAddress ?: \"Unknown\"
+        val body = smsMessage.messageBody ?: \"\"
+        val timestamp = smsMessage.timestampMillis
+        
+        // Check for silent SMS (Class 0)
+        val messageClass = smsMessage.messageClass
+        val isSilentSMS = messageClass == SmsMessage.MessageClass.CLASS_0
+        
+        // Check for WAP Push
+        val isWapPush = body.contains(\"http://\") || body.contains(\"https://\")
+        
+        // Check for suspicious patterns
+        val isSuspicious = detectSuspiciousPatterns(body)
+        
+        if (isSilentSMS || isWapPush || isSuspicious) {
+            Timber.w(
+                \"Suspicious SMS detected - From: $sender, Silent: $isSilentSMS, \" +
+                \"WapPush: $isWapPush, Suspicious: $isSuspicious\"
+            )
+            
+            // TODO: Store in database
+            // TODO: Trigger alert notification
+            // TODO: Broadcast to UI
+            
+            // For now, log the event
+            logSuspiciousSMS(sender, body, isSilentSMS, isWapPush)
+        }
+    }
+    
+    /**
+     * Detect suspicious SMS patterns.
+     */
+    private fun detectSuspiciousPatterns(body: String): Boolean {
+        // Empty body is suspicious
+        if (body.isEmpty()) return true
+        
+        // Check for common malicious patterns
+        val suspiciousPatterns = listOf(
+            \"USSD\",
+            \"*#\",
+            \"##\",
+            \"AT+\",
+            \"IMEI\",
+            \"IMSI\",
+            \"SIM\",
+            \"LOCATION\"
+        )
+        
+        return suspiciousPatterns.any { body.contains(it, ignoreCase = true) }
+    }
+    
+    /**
+     * Log suspicious SMS for analysis.
+     */
+    private fun logSuspiciousSMS(
+        sender: String,
+        body: String,
+        isSilentSMS: Boolean,
+        isWapPush: Boolean
+    ) {
+        Timber.d(
+            \"SMS Log - From: $sender, Body: ${body.take(50)}..., \" +
+            \"Silent: $isSilentSMS, WapPush: $isWapPush\"
+        )
+        
+        // TODO: Store in Realm database
+        // val smsLog = SMSLog(
+        //     sender = sender,
+        //     content = body,
+        //     classification = when {
+        //         isSilentSMS -> \"SILENT_SMS\"
+        //         isWapPush -> \"WAP_PUSH\"
+        //         else -> \"SUSPICIOUS\"
+        //     },
+        //     messageClass = if (isSilentSMS) 0 else -1
+        // )
+        // database.insertSMSLog(smsLog)
+    }
+}
+

@@ -1,1 +1,10 @@
-package com.imsidetector\n\nobject BuildConfig {\n    const val DEBUG = true\n    const val APPLICATION_ID = \"com.imsidetector\"\n    const val BUILD_TYPE = \"debug\"\n    const val VERSION_CODE = 1\n    const val VERSION_NAME = \"1.0.0\"\n}\n
+package com.imsidetector
+
+object BuildConfig {
+    const val DEBUG = true
+    const val APPLICATION_ID = \"com.imsidetector\"
+    const val BUILD_TYPE = \"debug\"
+    const val VERSION_CODE = 1
+    const val VERSION_NAME = \"1.0.0\"
+}
+

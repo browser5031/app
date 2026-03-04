@@ -1,1 +1,316 @@
-package com.imsidetector.domain\n\nimport com.imsidetector.data.CellTowerRecord\nimport timber.log.Timber\nimport kotlin.math.abs\nimport kotlin.math.sqrt\n\n/**\n * Advanced signal strength analyzer for detecting anomalies.\n * Implements statistical analysis, trend detection, and pattern recognition.\n */\nclass SignalAnalyzer {\n    \n    private val signalHistory = mutableListOf<SignalSnapshot>()\n    private val MAX_HISTORY_SIZE = 50\n    \n    data class SignalSnapshot(\n        val timestamp: Long,\n        val rssi: Int,\n        val rsrp: Int,\n        val rsrq: Int,\n        val level: Int\n    )\n    \n    /**\n     * Analyze signal strength for anomalies.\n     * Returns Pair<anomalyScore, detectedAnomalies>\n     */\n    fun analyzeSignalAnomalies(cell: CellTowerRecord): Pair<Int, List<String>> {\n        val anomalies = mutableListOf<String>()\n        var score = 0\n        \n        // Record signal snapshot\n        val snapshot = SignalSnapshot(\n            timestamp = cell.timestamp,\n            rssi = cell.rssi,\n            rsrp = cell.rsrp,\n            rsrq = cell.rsrq,\n            level = cell.signalLevel\n        )\n        \n        signalHistory.add(snapshot)\n        if (signalHistory.size > MAX_HISTORY_SIZE) {\n            signalHistory.removeAt(0)\n        }\n        \n        if (signalHistory.size < 2) {\n            return Pair(0, emptyList())\n        }\n        \n        // 1. Check for sudden signal changes\n        val suddenChangeAnomaly = checkSuddenSignalChange()\n        if (suddenChangeAnomaly.second.isNotEmpty()) {\n            score += suddenChangeAnomaly.first\n            anomalies.addAll(suddenChangeAnomaly.second)\n        }\n        \n        // 2. Check for oscillating signal (sign of fake tower)\n        val oscillationAnomaly = checkSignalOscillation()\n        if (oscillationAnomaly.second.isNotEmpty()) {\n            score += oscillationAnomaly.first\n            anomalies.addAll(oscillationAnomaly.second)\n        }\n        \n        // 3. Check for unusually strong signal\n        val strongSignalAnomaly = checkUnusuallyStrongSignal()\n        if (strongSignalAnomaly.second.isNotEmpty()) {\n            score += strongSignalAnomaly.first\n            anomalies.addAll(strongSignalAnomaly.second)\n        }\n        \n        // 4. Check for signal quality issues\n        val qualityAnomaly = checkSignalQuality(cell)\n        if (qualityAnomaly.second.isNotEmpty()) {\n            score += qualityAnomaly.first\n            anomalies.addAll(qualityAnomaly.second)\n        }\n        \n        // 5. Check for timing advance anomalies\n        val timingAnomaly = checkTimingAdvance(cell)\n        if (timingAnomaly.second.isNotEmpty()) {\n            score += timingAnomaly.first\n            anomalies.addAll(timingAnomaly.second)\n        }\n        \n        return Pair(score, anomalies)\n    }\n    \n    /**\n     * Detect sudden signal strength changes.\n     */\n    private fun checkSuddenSignalChange(): Pair<Int, List<String>> {\n        val anomalies = mutableListOf<String>()\n        var score = 0\n        \n        if (signalHistory.size < 2) {\n            return Pair(0, emptyList())\n        }\n        \n        val current = signalHistory.last()\n        val previous = signalHistory[signalHistory.size - 2]\n        \n        val signalChange = abs(current.rsrp - previous.rsrp)\n        \n        // Change of more than 15 dBm in one step is suspicious\n        if (signalChange > 15) {\n            score += 8\n            anomalies.add(\n                \"ANOMALY: Sudden signal change (${signalChange}dBm) from \" +\n                \"${previous.rsrp}dBm to ${current.rsrp}dBm\"\n            )\n        }\n        \n        // Change of more than 25 dBm is very suspicious\n        if (signalChange > 25) {\n            score += 12\n            anomalies.add(\n                \"SUSPICIOUS: Extreme signal change (${signalChange}dBm) - possible fake tower\"\n            )\n        }\n        \n        return Pair(score, anomalies)\n    }\n    \n    /**\n     * Detect oscillating signal pattern (sign of fake tower).\n     */\n    private fun checkSignalOscillation(): Pair<Int, List<String>> {\n        val anomalies = mutableListOf<String>()\n        var score = 0\n        \n        if (signalHistory.size < 5) {\n            return Pair(0, emptyList())\n        }\n        \n        // Check last 5 samples for oscillation\n        val recentSignals = signalHistory.takeLast(5).map { it.rsrp }\n        \n        // Count direction changes (oscillations)\n        var oscillations = 0\n        for (i in 1 until recentSignals.size - 1) {\n            val prev = recentSignals[i - 1]\n            val curr = recentSignals[i]\n            val next = recentSignals[i + 1]\n            \n            // Check if current value is local max or min\n            if ((curr > prev && curr > next) || (curr < prev && curr < next)) {\n                oscillations++\n            }\n        }\n        \n        // 3+ oscillations in 5 samples is suspicious\n        if (oscillations >= 3) {\n            score += 10\n            anomalies.add(\n                \"SUSPICIOUS: Signal oscillation pattern detected ($oscillations changes in 5 samples)\"\n            )\n        }\n        \n        // Check for regular oscillation pattern\n        if (signalHistory.size >= 10) {\n            val last10 = signalHistory.takeLast(10).map { it.rsrp }\n            val pattern = last10.zipWithNext { a, b -> if (a < b) 1 else -1 }\n            \n            // Check if pattern repeats\n            val patternStr = pattern.joinToString(\"\")\n            if (patternStr.contains(\"1-1\") || patternStr.contains(\"-11\")) {\n                score += 8\n                anomalies.add(\"ANOMALY: Regular oscillation pattern detected\")\n            }\n        }\n        \n        return Pair(score, anomalies)\n    }\n    \n    /**\n     * Check for unusually strong signal.\n     */\n    private fun checkUnusuallyStrongSignal(): Pair<Int, List<String>> {\n        val anomalies = mutableListOf<String>()\n        var score = 0\n        \n        val current = signalHistory.last()\n        \n        // RSRP better than -50 dBm is very unusual (typical is -75 to -120)\n        if (current.rsrp > -50) {\n            score += 5\n            anomalies.add(\"ANOMALY: Unusually strong signal (${current.rsrp}dBm)\")\n        }\n        \n        // RSRQ better than -5 dB is suspicious\n        if (current.rsrq > -5) {\n            score += 3\n            anomalies.add(\"ANOMALY: Unusually high signal quality (${current.rsrq}dB)\")\n        }\n        \n        // Check if signal is consistently too strong\n        if (signalHistory.size >= 5) {\n            val recentSignals = signalHistory.takeLast(5).map { it.rsrp }\n            val avgSignal = recentSignals.average()\n            \n            if (avgSignal > -50) {\n                score += 7\n                anomalies.add(\n                    \"SUSPICIOUS: Consistently strong signal (avg: ${avgSignal.toInt()}dBm) \" +\n                    \"may indicate fake tower\"\n                )\n            }\n        }\n        \n        return Pair(score, anomalies)\n    }\n    \n    /**\n     * Check for signal quality issues.\n     */\n    private fun checkSignalQuality(cell: CellTowerRecord): Pair<Int, List<String>> {\n        val anomalies = mutableListOf<String>()\n        var score = 0\n        \n        // RSRQ worse than -20 dB indicates poor quality\n        if (cell.rsrq < -20) {\n            score += 3\n            anomalies.add(\"ANOMALY: Poor signal quality (RSRQ: ${cell.rsrq}dB)\")\n        }\n        \n        // Check for CQI (Channel Quality Indicator) issues\n        if (cell.cqi in 0..4) {\n            score += 2\n            anomalies.add(\"ANOMALY: Very poor channel quality (CQI: ${cell.cqi})\")\n        }\n        \n        // Mismatch between RSRP and RSRQ (suspicious)\n        if (cell.rsrp > -100 && cell.rsrq < -15) {\n            score += 5\n            anomalies.add(\n                \"ANOMALY: RSRP/RSRQ mismatch - strong signal but poor quality \" +\n                \"(RSRP: ${cell.rsrp}, RSRQ: ${cell.rsrq})\"\n            )\n        }\n        \n        return Pair(score, anomalies)\n    }\n    \n    /**\n     * Check for timing advance anomalies.\n     */\n    private fun checkTimingAdvance(cell: CellTowerRecord): Pair<Int, List<String>> {\n        val anomalies = mutableListOf<String>()\n        var score = 0\n        \n        // Timing advance > 63 indicates very far distance (suspicious in urban areas)\n        if (cell.timingAdvance > 63) {\n            score += 4\n            anomalies.add(\n                \"ANOMALY: Large timing advance (${cell.timingAdvance}) indicates very distant tower\"\n            )\n        }\n        \n        // Check for timing advance changes\n        if (signalHistory.size >= 2) {\n            val current = signalHistory.last()\n            val previous = signalHistory[signalHistory.size - 2]\n            \n            // Timing advance shouldn't change much unless moving\n            val taChange = abs(cell.timingAdvance - (signalHistory[signalHistory.size - 2].rsrp))\n            if (taChange > 20) {\n                score += 3\n                anomalies.add(\"ANOMALY: Rapid timing advance change detected\")\n            }\n        }\n        \n        return Pair(score, anomalies)\n    }\n    \n    /**\n     * Get signal statistics for the last N samples.\n     */\n    fun getSignalStatistics(samples: Int = 10): SignalStatistics {\n        if (signalHistory.isEmpty()) {\n            return SignalStatistics()\n        }\n        \n        val recentSignals = signalHistory.takeLast(samples).map { it.rsrp }\n        \n        val avg = recentSignals.average()\n        val min = recentSignals.minOrNull() ?: 0\n        val max = recentSignals.maxOrNull() ?: 0\n        val variance = recentSignals.map { (it - avg) * (it - avg) }.average()\n        val stdDev = sqrt(variance)\n        \n        return SignalStatistics(\n            average = avg.toInt(),\n            min = min,\n            max = max,\n            stdDev = stdDev.toInt(),\n            sampleCount = recentSignals.size\n        )\n    }\n    \n    /**\n     * Clear history.\n     */\n    fun clearHistory() {\n        signalHistory.clear()\n    }\n}\n\ndata class SignalStatistics(\n    val average: Int = 0,\n    val min: Int = 0,\n    val max: Int = 0,\n    val stdDev: Int = 0,\n    val sampleCount: Int = 0\n)\n
+package com.imsidetector.domain
+
+import com.imsidetector.data.CellTowerRecord
+import timber.log.Timber
+import kotlin.math.abs
+import kotlin.math.sqrt
+
+/**
+ * Advanced signal strength analyzer for detecting anomalies.
+ * Implements statistical analysis, trend detection, and pattern recognition.
+ */
+class SignalAnalyzer {
+    
+    private val signalHistory = mutableListOf<SignalSnapshot>()
+    private val MAX_HISTORY_SIZE = 50
+    
+    data class SignalSnapshot(
+        val timestamp: Long,
+        val rssi: Int,
+        val rsrp: Int,
+        val rsrq: Int,
+        val level: Int
+    )
+    
+    /**
+     * Analyze signal strength for anomalies.
+     * Returns Pair<anomalyScore, detectedAnomalies>
+     */
+    fun analyzeSignalAnomalies(cell: CellTowerRecord): Pair<Int, List<String>> {
+        val anomalies = mutableListOf<String>()
+        var score = 0
+        
+        // Record signal snapshot
+        val snapshot = SignalSnapshot(
+            timestamp = cell.timestamp,
+            rssi = cell.rssi,
+            rsrp = cell.rsrp,
+            rsrq = cell.rsrq,
+            level = cell.signalLevel
+        )
+        
+        signalHistory.add(snapshot)
+        if (signalHistory.size > MAX_HISTORY_SIZE) {
+            signalHistory.removeAt(0)
+        }
+        
+        if (signalHistory.size < 2) {
+            return Pair(0, emptyList())
+        }
+        
+        // 1. Check for sudden signal changes
+        val suddenChangeAnomaly = checkSuddenSignalChange()
+        if (suddenChangeAnomaly.second.isNotEmpty()) {
+            score += suddenChangeAnomaly.first
+            anomalies.addAll(suddenChangeAnomaly.second)
+        }
+        
+        // 2. Check for oscillating signal (sign of fake tower)
+        val oscillationAnomaly = checkSignalOscillation()
+        if (oscillationAnomaly.second.isNotEmpty()) {
+            score += oscillationAnomaly.first
+            anomalies.addAll(oscillationAnomaly.second)
+        }
+        
+        // 3. Check for unusually strong signal
+        val strongSignalAnomaly = checkUnusuallyStrongSignal()
+        if (strongSignalAnomaly.second.isNotEmpty()) {
+            score += strongSignalAnomaly.first
+            anomalies.addAll(strongSignalAnomaly.second)
+        }
+        
+        // 4. Check for signal quality issues
+        val qualityAnomaly = checkSignalQuality(cell)
+        if (qualityAnomaly.second.isNotEmpty()) {
+            score += qualityAnomaly.first
+            anomalies.addAll(qualityAnomaly.second)
+        }
+        
+        // 5. Check for timing advance anomalies
+        val timingAnomaly = checkTimingAdvance(cell)
+        if (timingAnomaly.second.isNotEmpty()) {
+            score += timingAnomaly.first
+            anomalies.addAll(timingAnomaly.second)
+        }
+        
+        return Pair(score, anomalies)
+    }
+    
+    /**
+     * Detect sudden signal strength changes.
+     */
+    private fun checkSuddenSignalChange(): Pair<Int, List<String>> {
+        val anomalies = mutableListOf<String>()
+        var score = 0
+        
+        if (signalHistory.size < 2) {
+            return Pair(0, emptyList())
+        }
+        
+        val current = signalHistory.last()
+        val previous = signalHistory[signalHistory.size - 2]
+        
+        val signalChange = abs(current.rsrp - previous.rsrp)
+        
+        // Change of more than 15 dBm in one step is suspicious
+        if (signalChange > 15) {
+            score += 8
+            anomalies.add(
+                \"ANOMALY: Sudden signal change (${signalChange}dBm) from \" +
+                \"${previous.rsrp}dBm to ${current.rsrp}dBm\"
+            )
+        }
+        
+        // Change of more than 25 dBm is very suspicious
+        if (signalChange > 25) {
+            score += 12
+            anomalies.add(
+                \"SUSPICIOUS: Extreme signal change (${signalChange}dBm) - possible fake tower\"
+            )
+        }
+        
+        return Pair(score, anomalies)
+    }
+    
+    /**
+     * Detect oscillating signal pattern (sign of fake tower).
+     */
+    private fun checkSignalOscillation(): Pair<Int, List<String>> {
+        val anomalies = mutableListOf<String>()
+        var score = 0
+        
+        if (signalHistory.size < 5) {
+            return Pair(0, emptyList())
+        }
+        
+        // Check last 5 samples for oscillation
+        val recentSignals = signalHistory.takeLast(5).map { it.rsrp }
+        
+        // Count direction changes (oscillations)
+        var oscillations = 0
+        for (i in 1 until recentSignals.size - 1) {
+            val prev = recentSignals[i - 1]
+            val curr = recentSignals[i]
+            val next = recentSignals[i + 1]
+            
+            // Check if current value is local max or min
+            if ((curr > prev && curr > next) || (curr < prev && curr < next)) {
+                oscillations++
+            }
+        }
+        
+        // 3+ oscillations in 5 samples is suspicious
+        if (oscillations >= 3) {
+            score += 10
+            anomalies.add(
+                \"SUSPICIOUS: Signal oscillation pattern detected ($oscillations changes in 5 samples)\"
+            )
+        }
+        
+        // Check for regular oscillation pattern
+        if (signalHistory.size >= 10) {
+            val last10 = signalHistory.takeLast(10).map { it.rsrp }
+            val pattern = last10.zipWithNext { a, b -> if (a < b) 1 else -1 }
+            
+            // Check if pattern repeats
+            val patternStr = pattern.joinToString(\"\")
+            if (patternStr.contains(\"1-1\") || patternStr.contains(\"-11\")) {
+                score += 8
+                anomalies.add(\"ANOMALY: Regular oscillation pattern detected\")
+            }
+        }
+        
+        return Pair(score, anomalies)
+    }
+    
+    /**
+     * Check for unusually strong signal.
+     */
+    private fun checkUnusuallyStrongSignal(): Pair<Int, List<String>> {
+        val anomalies = mutableListOf<String>()
+        var score = 0
+        
+        val current = signalHistory.last()
+        
+        // RSRP better than -50 dBm is very unusual (typical is -75 to -120)
+        if (current.rsrp > -50) {
+            score += 5
+            anomalies.add(\"ANOMALY: Unusually strong signal (${current.rsrp}dBm)\")
+        }
+        
+        // RSRQ better than -5 dB is suspicious
+        if (current.rsrq > -5) {
+            score += 3
+            anomalies.add(\"ANOMALY: Unusually high signal quality (${current.rsrq}dB)\")
+        }
+        
+        // Check if signal is consistently too strong
+        if (signalHistory.size >= 5) {
+            val recentSignals = signalHistory.takeLast(5).map { it.rsrp }
+            val avgSignal = recentSignals.average()
+            
+            if (avgSignal > -50) {
+                score += 7
+                anomalies.add(
+                    \"SUSPICIOUS: Consistently strong signal (avg: ${avgSignal.toInt()}dBm) \" +
+                    \"may indicate fake tower\"
+                )
+            }
+        }
+        
+        return Pair(score, anomalies)
+    }
+    
+    /**
+     * Check for signal quality issues.
+     */
+    private fun checkSignalQuality(cell: CellTowerRecord): Pair<Int, List<String>> {
+        val anomalies = mutableListOf<String>()
+        var score = 0
+        
+        // RSRQ worse than -20 dB indicates poor quality
+        if (cell.rsrq < -20) {
+            score += 3
+            anomalies.add(\"ANOMALY: Poor signal quality (RSRQ: ${cell.rsrq}dB)\")
+        }
+        
+        // Check for CQI (Channel Quality Indicator) issues
+        if (cell.cqi in 0..4) {
+            score += 2
+            anomalies.add(\"ANOMALY: Very poor channel quality (CQI: ${cell.cqi})\")
+        }
+        
+        // Mismatch between RSRP and RSRQ (suspicious)
+        if (cell.rsrp > -100 && cell.rsrq < -15) {
+            score += 5
+            anomalies.add(
+                \"ANOMALY: RSRP/RSRQ mismatch - strong signal but poor quality \" +
+                \"(RSRP: ${cell.rsrp}, RSRQ: ${cell.rsrq})\"
+            )
+        }
+        
+        return Pair(score, anomalies)
+    }
+    
+    /**
+     * Check for timing advance anomalies.
+     */
+    private fun checkTimingAdvance(cell: CellTowerRecord): Pair<Int, List<String>> {
+        val anomalies = mutableListOf<String>()
+        var score = 0
+        
+        // Timing advance > 63 indicates very far distance (suspicious in urban areas)
+        if (cell.timingAdvance > 63) {
+            score += 4
+            anomalies.add(
+                \"ANOMALY: Large timing advance (${cell.timingAdvance}) indicates very distant tower\"
+            )
+        }
+        
+        // Check for timing advance changes
+        if (signalHistory.size >= 2) {
+            val current = signalHistory.last()
+            val previous = signalHistory[signalHistory.size - 2]
+            
+            // Timing advance shouldn't change much unless moving
+            val taChange = abs(cell.timingAdvance - (signalHistory[signalHistory.size - 2].rsrp))
+            if (taChange > 20) {
+                score += 3
+                anomalies.add(\"ANOMALY: Rapid timing advance change detected\")
+            }
+        }
+        
+        return Pair(score, anomalies)
+    }
+    
+    /**
+     * Get signal statistics for the last N samples.
+     */
+    fun getSignalStatistics(samples: Int = 10): SignalStatistics {
+        if (signalHistory.isEmpty()) {
+            return SignalStatistics()
+        }
+        
+        val recentSignals = signalHistory.takeLast(samples).map { it.rsrp }
+        
+        val avg = recentSignals.average()
+        val min = recentSignals.minOrNull() ?: 0
+        val max = recentSignals.maxOrNull() ?: 0
+        val variance = recentSignals.map { (it - avg) * (it - avg) }.average()
+        val stdDev = sqrt(variance)
+        
+        return SignalStatistics(
+            average = avg.toInt(),
+            min = min,
+            max = max,
+            stdDev = stdDev.toInt(),
+            sampleCount = recentSignals.size
+        )
+    }
+    
+    /**
+     * Clear history.
+     */
+    fun clearHistory() {
+        signalHistory.clear()
+    }
+}
+
+data class SignalStatistics(
+    val average: Int = 0,
+    val min: Int = 0,
+    val max: Int = 0,
+    val stdDev: Int = 0,
+    val sampleCount: Int = 0
+)
+

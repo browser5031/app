@@ -1,1 +1,255 @@
-package com.imsidetector.ui.screens\n\nimport androidx.compose.foundation.background\nimport androidx.compose.foundation.layout.Column\nimport androidx.compose.foundation.layout.Row\nimport androidx.compose.foundation.layout.Spacer\nimport androidx.compose.foundation.layout.fillMaxSize\nimport androidx.compose.foundation.layout.fillMaxWidth\nimport androidx.compose.foundation.layout.height\nimport androidx.compose.foundation.layout.padding\nimport androidx.compose.foundation.rememberScrollState\nimport androidx.compose.foundation.verticalScroll\nimport androidx.compose.material.icons.Icons\nimport androidx.compose.material.icons.filled.ArrowBack\nimport androidx.compose.material3.Button\nimport androidx.compose.material3.ButtonDefaults\nimport androidx.compose.material3.Card\nimport androidx.compose.material3.CardDefaults\nimport androidx.compose.material3.Icon\nimport androidx.compose.material3.IconButton\nimport androidx.compose.material3.MaterialTheme\nimport androidx.compose.material3.Scaffold\nimport androidx.compose.material3.Switch\nimport androidx.compose.material3.Text\nimport androidx.compose.material3.TopAppBar\nimport androidx.compose.material3.TopAppBarDefaults\nimport androidx.compose.runtime.Composable\nimport androidx.compose.runtime.mutableStateOf\nimport androidx.compose.runtime.remember\nimport androidx.compose.ui.Alignment\nimport androidx.compose.ui.Modifier\nimport androidx.compose.ui.graphics.Color\nimport androidx.compose.ui.text.font.FontWeight\nimport androidx.compose.ui.unit.dp\n\n/**\n * Settings screen for app configuration.\n * Design Philosophy: Clean settings layout with toggle switches and action buttons\n */\n@Composable\nfun SettingsScreen(\n    onBackClick: () -> Unit,\n    onClearDataClick: () -> Unit\n) {\n    val notificationsEnabled = remember { mutableStateOf(true) }\n    val backgroundMonitoring = remember { mutableStateOf(true) }\n    val autoResetBaseline = remember { mutableStateOf(false) }\n    \n    Scaffold(\n        topBar = {\n            TopAppBar(\n                title = {\n                    Text(\n                        \"Settings\",\n                        style = MaterialTheme.typography.headlineSmall,\n                        fontWeight = FontWeight.Bold\n                    )\n                },\n                navigationIcon = {\n                    IconButton(onClick = onBackClick) {\n                        Icon(\n                            Icons.Default.ArrowBack,\n                            contentDescription = \"Back\",\n                            tint = MaterialTheme.colorScheme.onPrimary\n                        )\n                    }\n                },\n                colors = TopAppBarDefaults.topAppBarColors(\n                    containerColor = MaterialTheme.colorScheme.primary,\n                    titleContentColor = MaterialTheme.colorScheme.onPrimary\n                )\n            )\n        }\n    ) { paddingValues ->\n        Column(\n            modifier = Modifier\n                .fillMaxSize()\n                .padding(paddingValues)\n                .background(MaterialTheme.colorScheme.background)\n                .verticalScroll(rememberScrollState())\n                .padding(16.dp)\n        ) {\n            // Monitoring Settings\n            SettingsSectionHeader(\"Monitoring\")\n            \n            SettingToggleItem(\n                title = \"Background Monitoring\",\n                description = \"Monitor cell towers even when app is closed\",\n                checked = backgroundMonitoring.value,\n                onCheckedChange = { backgroundMonitoring.value = it }\n            )\n            \n            SettingToggleItem(\n                title = \"Notifications\",\n                description = \"Receive alerts for detected threats\",\n                checked = notificationsEnabled.value,\n                onCheckedChange = { notificationsEnabled.value = it }\n            )\n            \n            Spacer(modifier = Modifier.height(24.dp))\n            \n            // Detection Settings\n            SettingsSectionHeader(\"Detection\")\n            \n            SettingToggleItem(\n                title = \"Auto-Reset Baseline\",\n                description = \"Automatically reset baseline when location changes\",\n                checked = autoResetBaseline.value,\n                onCheckedChange = { autoResetBaseline.value = it }\n            )\n            \n            Spacer(modifier = Modifier.height(24.dp))\n            \n            // Data Management\n            SettingsSectionHeader(\"Data Management\")\n            \n            Button(\n                onClick = onClearDataClick,\n                modifier = Modifier\n                    .fillMaxWidth()\n                    .height(48.dp),\n                colors = ButtonDefaults.buttonColors(\n                    containerColor = MaterialTheme.colorScheme.errorContainer,\n                    contentColor = MaterialTheme.colorScheme.error\n                ),\n                shape = MaterialTheme.shapes.large\n            ) {\n                Text(\n                    \"Clear All Data\",\n                    fontWeight = FontWeight.Bold\n                )\n            }\n            \n            Text(\n                text = \"This will delete all threat history and cell records\",\n                style = MaterialTheme.typography.labelSmall,\n                color = MaterialTheme.colorScheme.onSurfaceVariant,\n                modifier = Modifier.padding(top = 8.dp)\n            )\n            \n            Spacer(modifier = Modifier.height(24.dp))\n            \n            // About\n            SettingsSectionHeader(\"About\")\n            \n            Card(\n                modifier = Modifier.fillMaxWidth(),\n                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),\n                shape = MaterialTheme.shapes.large\n            ) {\n                Column(\n                    modifier = Modifier.padding(16.dp)\n                ) {\n                    InfoRow(\"App Version\", \"1.0.0\")\n                    InfoRow(\"Build\", \"Release\")\n                    InfoRow(\"Target API\", \"Android 15\")\n                    InfoRow(\"Min API\", \"Android 12\")\n                }\n            }\n            \n            Spacer(modifier = Modifier.height(24.dp))\n        }\n    }\n}\n\n/**\n * Settings section header.\n */\n@Composable\nfun SettingsSectionHeader(title: String) {\n    Text(\n        text = title,\n        style = MaterialTheme.typography.titleMedium,\n        fontWeight = FontWeight.Bold,\n        color = MaterialTheme.colorScheme.primary,\n        modifier = Modifier.padding(vertical = 8.dp)\n    )\n}\n\n/**\n * Settings toggle item.\n */\n@Composable\nfun SettingToggleItem(\n    title: String,\n    description: String,\n    checked: Boolean,\n    onCheckedChange: (Boolean) -> Unit\n) {\n    Card(\n        modifier = Modifier\n            .fillMaxWidth()\n            .padding(vertical = 8.dp),\n        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),\n        shape = MaterialTheme.shapes.large\n    ) {\n        Row(\n            modifier = Modifier\n                .fillMaxWidth()\n                .padding(16.dp),\n            verticalAlignment = Alignment.CenterVertically\n        ) {\n            Column(\n                modifier = Modifier.weight(1f)\n            ) {\n                Text(\n                    text = title,\n                    style = MaterialTheme.typography.bodyMedium,\n                    fontWeight = FontWeight.Medium,\n                    color = MaterialTheme.colorScheme.onSurface\n                )\n                \n                Text(\n                    text = description,\n                    style = MaterialTheme.typography.labelSmall,\n                    color = MaterialTheme.colorScheme.onSurfaceVariant,\n                    modifier = Modifier.padding(top = 4.dp)\n                )\n            }\n            \n            Switch(\n                checked = checked,\n                onCheckedChange = onCheckedChange,\n                modifier = Modifier.padding(start = 16.dp)\n            )\n        }\n    }\n}\n\n/**\n * Information row for displaying key-value pairs.\n */\n@Composable\nfun InfoRow(label: String, value: String) {\n    Row(\n        modifier = Modifier\n            .fillMaxWidth()\n            .padding(vertical = 8.dp),\n        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween\n    ) {\n        Text(\n            text = label,\n            style = MaterialTheme.typography.bodySmall,\n            color = MaterialTheme.colorScheme.onSurfaceVariant\n        )\n        \n        Text(\n            text = value,\n            style = MaterialTheme.typography.bodySmall,\n            fontWeight = FontWeight.Medium,\n            color = MaterialTheme.colorScheme.onSurface\n        )\n    }\n}\n
+package com.imsidetector.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+
+/**
+ * Settings screen for app configuration.
+ * Design Philosophy: Clean settings layout with toggle switches and action buttons
+ */
+@Composable
+fun SettingsScreen(
+    onBackClick: () -> Unit,
+    onClearDataClick: () -> Unit
+) {
+    val notificationsEnabled = remember { mutableStateOf(true) }
+    val backgroundMonitoring = remember { mutableStateOf(true) }
+    val autoResetBaseline = remember { mutableStateOf(false) }
+    
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        \"Settings\",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = \"Back\",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.background)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+        ) {
+            // Monitoring Settings
+            SettingsSectionHeader(\"Monitoring\")
+            
+            SettingToggleItem(
+                title = \"Background Monitoring\",
+                description = \"Monitor cell towers even when app is closed\",
+                checked = backgroundMonitoring.value,
+                onCheckedChange = { backgroundMonitoring.value = it }
+            )
+            
+            SettingToggleItem(
+                title = \"Notifications\",
+                description = \"Receive alerts for detected threats\",
+                checked = notificationsEnabled.value,
+                onCheckedChange = { notificationsEnabled.value = it }
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Detection Settings
+            SettingsSectionHeader(\"Detection\")
+            
+            SettingToggleItem(
+                title = \"Auto-Reset Baseline\",
+                description = \"Automatically reset baseline when location changes\",
+                checked = autoResetBaseline.value,
+                onCheckedChange = { autoResetBaseline.value = it }
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Data Management
+            SettingsSectionHeader(\"Data Management\")
+            
+            Button(
+                onClick = onClearDataClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                shape = MaterialTheme.shapes.large
+            ) {
+                Text(
+                    \"Clear All Data\",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            Text(
+                text = \"This will delete all threat history and cell records\",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // About
+            SettingsSectionHeader(\"About\")
+            
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = MaterialTheme.shapes.large
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    InfoRow(\"App Version\", \"1.0.0\")
+                    InfoRow(\"Build\", \"Release\")
+                    InfoRow(\"Target API\", \"Android 15\")
+                    InfoRow(\"Min API\", \"Android 12\")
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+/**
+ * Settings section header.
+ */
+@Composable
+fun SettingsSectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(vertical = 8.dp)
+    )
+}
+
+/**
+ * Settings toggle item.
+ */
+@Composable
+fun SettingToggleItem(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.large
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+            
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                modifier = Modifier.padding(start = 16.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Information row for displaying key-value pairs.
+ */
+@Composable
+fun InfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
