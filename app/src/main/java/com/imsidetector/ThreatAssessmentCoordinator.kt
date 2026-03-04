@@ -16,7 +16,7 @@ class ThreatAssessmentCoordinator(context: Context) {
     private val cellTowerAnalyzer = CellTowerAnalyzer()
     private val detectionEngine = DetectionEngine()
     
-    private var previousNetworkType: String = \"\"
+    private var previousNetworkType: String = ""
     
     /**
      * Perform comprehensive threat assessment.
@@ -60,7 +60,7 @@ class ThreatAssessmentCoordinator(context: Context) {
         detectedThreats.addAll(cellTowerResult.second)
         
         if (cellConsistencyScore > 0) {
-            recommendations.add(\"Monitor cell tower changes - verify tower legitimacy\")
+            recommendations.add("Monitor cell tower changes - verify tower legitimacy")
         }
         
         // 5. Signal Strength Analysis
@@ -69,7 +69,7 @@ class ThreatAssessmentCoordinator(context: Context) {
         detectedThreats.addAll(signalResult.second)
         
         if (signalAnomalyScore > 0) {
-            recommendations.add(\"Check signal strength trends - sudden changes may indicate fake tower\")
+            recommendations.add("Check signal strength trends - sudden changes may indicate fake tower")
         }
         
         // Calculate overall threat score with weighted contributions
@@ -85,10 +85,10 @@ class ThreatAssessmentCoordinator(context: Context) {
         // Add general recommendations
         if (recommendations.isEmpty()) {
             when (threatLevel) {
-                \"GREEN\" -> recommendations.add(\"Network appears secure - no threats detected\")
-                \"YELLOW\" -> recommendations.add(\"Minor anomalies detected - continue monitoring\")
-                \"ORANGE\" -> recommendations.add(\"Significant threats detected - verify network legitimacy\")
-                \"RED\" -> recommendations.add(\"Critical threat detected - move to safe location immediately\")
+                "GREEN" -> recommendations.add("Network appears secure - no threats detected")
+                "YELLOW" -> recommendations.add("Minor anomalies detected - continue monitoring")
+                "ORANGE" -> recommendations.add("Significant threats detected - verify network legitimacy")
+                "RED" -> recommendations.add("Critical threat detected - move to safe location immediately")
             }
         }
         
@@ -96,10 +96,10 @@ class ThreatAssessmentCoordinator(context: Context) {
         previousNetworkType = cell.networkType
         
         Timber.d(
-            \"Threat Assessment - Overall: $overallScore, Level: $threatLevel, \" +
-            \"Encryption: $encryptionScore, CellConsistency: $cellConsistencyScore, \" +
-            \"Signal: $signalAnomalyScore, Protocol: $protocolAnomalyScore, \" +
-            \"Threats: ${detectedThreats.size}\"
+            "Threat Assessment - Overall: $overallScore, Level: $threatLevel, " +
+            "Encryption: $encryptionScore, CellConsistency: $cellConsistencyScore, " +
+            "Signal: $signalAnomalyScore, Protocol: $protocolAnomalyScore, " +
+            "Threats: ${detectedThreats.size}"
         )
         
         return ThreatAnalysis(
@@ -126,17 +126,17 @@ class ThreatAssessmentCoordinator(context: Context) {
     ): Int {
         // Weights: encryption is most critical indicator of IMSI catcher
         val weights = mapOf(
-            \"encryption\" to 0.45,        // Highest weight - A5/0 is definitive
-            \"cellConsistency\" to 0.30,   // Cell tower behavior is strong indicator
-            \"signalAnomaly\" to 0.15,     // Signal patterns are secondary
-            \"protocolAnomaly\" to 0.10    // Protocol issues are lowest priority
+            "encryption" to 0.45,        // Highest weight - A5/0 is definitive
+            "cellConsistency" to 0.30,   // Cell tower behavior is strong indicator
+            "signalAnomaly" to 0.15,     // Signal patterns are secondary
+            "protocolAnomaly" to 0.10    // Protocol issues are lowest priority
         )
         
         val weighted = (
-            encryptionScore * weights[\"encryption\"]!! +
-            cellConsistencyScore * weights[\"cellConsistency\"]!! +
-            signalAnomalyScore * weights[\"signalAnomaly\"]!! +
-            protocolAnomalyScore * weights[\"protocolAnomaly\"]!!
+            encryptionScore * weights["encryption"]!! +
+            cellConsistencyScore * weights["cellConsistency"]!! +
+            signalAnomalyScore * weights["signalAnomaly"]!! +
+            protocolAnomalyScore * weights["protocolAnomaly"]!!
         ).toInt()
         
         return kotlin.math.min(weighted, 100) // Cap at 100
@@ -147,10 +147,10 @@ class ThreatAssessmentCoordinator(context: Context) {
      */
     private fun getThreatLevel(score: Int): String {
         return when {
-            score <= 20 -> \"GREEN\"
-            score <= 50 -> \"YELLOW\"
-            score <= 75 -> \"ORANGE\"
-            else -> \"RED\"
+            score <= 20 -> "GREEN"
+            score <= 50 -> "YELLOW"
+            score <= 75 -> "ORANGE"
+            else -> "RED"
         }
     }
     
@@ -159,29 +159,29 @@ class ThreatAssessmentCoordinator(context: Context) {
      */
     fun getThreatBreakdown(cell: CellTowerRecord): Map<String, Any> {
         return mapOf(
-            \"encryption\" to mapOf(
-                \"cipher\" to cell.cipherAlgorithm,
-                \"status\" to cell.cipherStatus,
-                \"strength\" to encryptionAnalyzer.getCipherStrengthRating(cell.cipherAlgorithm),
-                \"acceptable\" to encryptionAnalyzer.isCipherAcceptable(cell.cipherAlgorithm)
+            "encryption" to mapOf(
+                "cipher" to cell.cipherAlgorithm,
+                "status" to cell.cipherStatus,
+                "strength" to encryptionAnalyzer.getCipherStrengthRating(cell.cipherAlgorithm),
+                "acceptable" to encryptionAnalyzer.isCipherAcceptable(cell.cipherAlgorithm)
             ),
-            \"signal\" to mapOf(
-                \"rsrp\" to cell.rsrp,
-                \"rsrq\" to cell.rsrq,
-                \"level\" to cell.signalLevel,
-                \"statistics\" to signalAnalyzer.getSignalStatistics()
+            "signal" to mapOf(
+                "rsrp" to cell.rsrp,
+                "rsrq" to cell.rsrq,
+                "level" to cell.signalLevel,
+                "statistics" to signalAnalyzer.getSignalStatistics()
             ),
-            \"cellTower\" to mapOf(
-                \"lac\" to cell.lac,
-                \"tac\" to cell.tac,
-                \"cid\" to cell.cid,
-                \"networkType\" to cell.networkType,
-                \"operator\" to cell.operatorName
+            "cellTower" to mapOf(
+                "lac" to cell.lac,
+                "tac" to cell.tac,
+                "cid" to cell.cid,
+                "networkType" to cell.networkType,
+                "operator" to cell.operatorName
             ),
-            \"location\" to mapOf(
-                \"latitude\" to cell.latitude,
-                \"longitude\" to cell.longitude,
-                \"accuracy\" to cell.accuracy
+            "location" to mapOf(
+                "latitude" to cell.latitude,
+                "longitude" to cell.longitude,
+                "accuracy" to cell.accuracy
             )
         )
     }
@@ -192,8 +192,8 @@ class ThreatAssessmentCoordinator(context: Context) {
     fun reset() {
         signalAnalyzer.clearHistory()
         cellTowerAnalyzer.clearHistory()
-        previousNetworkType = \"\"
-        Timber.d(\"Threat assessment coordinator reset\")
+        previousNetworkType = ""
+        Timber.d("Threat assessment coordinator reset")
     }
 }
 

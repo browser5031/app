@@ -106,8 +106,8 @@ class SignalAnalyzer {
         if (signalChange > 15) {
             score += 8
             anomalies.add(
-                \"ANOMALY: Sudden signal change (${signalChange}dBm) from \" +
-                \"${previous.rsrp}dBm to ${current.rsrp}dBm\"
+                "ANOMALY: Sudden signal change (${signalChange}dBm) from " +
+                "${previous.rsrp}dBm to ${current.rsrp}dBm"
             )
         }
         
@@ -115,7 +115,7 @@ class SignalAnalyzer {
         if (signalChange > 25) {
             score += 12
             anomalies.add(
-                \"SUSPICIOUS: Extreme signal change (${signalChange}dBm) - possible fake tower\"
+                "SUSPICIOUS: Extreme signal change (${signalChange}dBm) - possible fake tower"
             )
         }
         
@@ -153,7 +153,7 @@ class SignalAnalyzer {
         if (oscillations >= 3) {
             score += 10
             anomalies.add(
-                \"SUSPICIOUS: Signal oscillation pattern detected ($oscillations changes in 5 samples)\"
+                "SUSPICIOUS: Signal oscillation pattern detected ($oscillations changes in 5 samples)"
             )
         }
         
@@ -163,10 +163,10 @@ class SignalAnalyzer {
             val pattern = last10.zipWithNext { a, b -> if (a < b) 1 else -1 }
             
             // Check if pattern repeats
-            val patternStr = pattern.joinToString(\"\")
-            if (patternStr.contains(\"1-1\") || patternStr.contains(\"-11\")) {
+            val patternStr = pattern.joinToString("")
+            if (patternStr.contains("1-1") || patternStr.contains("-11")) {
                 score += 8
-                anomalies.add(\"ANOMALY: Regular oscillation pattern detected\")
+                anomalies.add("ANOMALY: Regular oscillation pattern detected")
             }
         }
         
@@ -185,13 +185,13 @@ class SignalAnalyzer {
         // RSRP better than -50 dBm is very unusual (typical is -75 to -120)
         if (current.rsrp > -50) {
             score += 5
-            anomalies.add(\"ANOMALY: Unusually strong signal (${current.rsrp}dBm)\")
+            anomalies.add("ANOMALY: Unusually strong signal (${current.rsrp}dBm)")
         }
         
         // RSRQ better than -5 dB is suspicious
         if (current.rsrq > -5) {
             score += 3
-            anomalies.add(\"ANOMALY: Unusually high signal quality (${current.rsrq}dB)\")
+            anomalies.add("ANOMALY: Unusually high signal quality (${current.rsrq}dB)")
         }
         
         // Check if signal is consistently too strong
@@ -202,8 +202,8 @@ class SignalAnalyzer {
             if (avgSignal > -50) {
                 score += 7
                 anomalies.add(
-                    \"SUSPICIOUS: Consistently strong signal (avg: ${avgSignal.toInt()}dBm) \" +
-                    \"may indicate fake tower\"
+                    "SUSPICIOUS: Consistently strong signal (avg: ${avgSignal.toInt()}dBm) " +
+                    "may indicate fake tower"
                 )
             }
         }
@@ -221,21 +221,21 @@ class SignalAnalyzer {
         // RSRQ worse than -20 dB indicates poor quality
         if (cell.rsrq < -20) {
             score += 3
-            anomalies.add(\"ANOMALY: Poor signal quality (RSRQ: ${cell.rsrq}dB)\")
+            anomalies.add("ANOMALY: Poor signal quality (RSRQ: ${cell.rsrq}dB)")
         }
         
         // Check for CQI (Channel Quality Indicator) issues
         if (cell.cqi in 0..4) {
             score += 2
-            anomalies.add(\"ANOMALY: Very poor channel quality (CQI: ${cell.cqi})\")
+            anomalies.add("ANOMALY: Very poor channel quality (CQI: ${cell.cqi})")
         }
         
         // Mismatch between RSRP and RSRQ (suspicious)
         if (cell.rsrp > -100 && cell.rsrq < -15) {
             score += 5
             anomalies.add(
-                \"ANOMALY: RSRP/RSRQ mismatch - strong signal but poor quality \" +
-                \"(RSRP: ${cell.rsrp}, RSRQ: ${cell.rsrq})\"
+                "ANOMALY: RSRP/RSRQ mismatch - strong signal but poor quality " +
+                "(RSRP: ${cell.rsrp}, RSRQ: ${cell.rsrq})"
             )
         }
         
@@ -253,7 +253,7 @@ class SignalAnalyzer {
         if (cell.timingAdvance > 63) {
             score += 4
             anomalies.add(
-                \"ANOMALY: Large timing advance (${cell.timingAdvance}) indicates very distant tower\"
+                "ANOMALY: Large timing advance (${cell.timingAdvance}) indicates very distant tower"
             )
         }
         
@@ -266,7 +266,7 @@ class SignalAnalyzer {
             val taChange = abs(cell.timingAdvance - (signalHistory[signalHistory.size - 2].rsrp))
             if (taChange > 20) {
                 score += 3
-                anomalies.add(\"ANOMALY: Rapid timing advance change detected\")
+                anomalies.add("ANOMALY: Rapid timing advance change detected")
             }
         }
         

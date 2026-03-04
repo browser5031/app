@@ -15,9 +15,9 @@ class CellTowerAnalyzer {
     
     // Known legitimate LAC/TAC ranges (simplified - in production would use telecom databases)
     private val knownLacRanges = mapOf(
-        \"US\" to (1..65535),
-        \"EU\" to (1..65535),
-        \"ASIA\" to (1..65535)
+        "US" to (1..65535),
+        "EU" to (1..65535),
+        "ASIA" to (1..65535)
     )
     
     /**
@@ -97,15 +97,15 @@ class CellTowerAnalyzer {
             if (timeDiff < 10000) {
                 score += 15
                 anomalies.add(
-                    \"SUSPICIOUS: LAC/TAC changed rapidly (${timeDiff}ms) from \" +
-                    \"${previous.lac}/${previous.tac} to ${current.lac}/${current.tac}\"
+                    "SUSPICIOUS: LAC/TAC changed rapidly (${timeDiff}ms) from " +
+                    "${previous.lac}/${previous.tac} to ${current.lac}/${current.tac}"
                 )
             }
             
             // Check for impossible LAC/TAC combinations
             if (isImpossibleLacTac(current)) {
                 score += 20
-                anomalies.add(\"CRITICAL: Impossible LAC/TAC combination detected (${current.lac}/${current.tac})\")
+                anomalies.add("CRITICAL: Impossible LAC/TAC combination detected (${current.lac}/${current.tac})")
             }
         }
         
@@ -113,7 +113,7 @@ class CellTowerAnalyzer {
         if ((previous.lac != current.lac || previous.tac != current.tac) &&
             previous.cid == current.cid) {
             score += 10
-            anomalies.add(\"ANOMALY: LAC/TAC changed but CID remained same\")
+            anomalies.add("ANOMALY: LAC/TAC changed but CID remained same")
         }
         
         return Pair(score, anomalies)
@@ -136,21 +136,21 @@ class CellTowerAnalyzer {
             
             score += 8
             anomalies.add(
-                \"ANOMALY: Cell ID changed (${previous.cid} → ${current.cid}) \" +
-                \"without LAC/TAC change\"
+                "ANOMALY: Cell ID changed (${previous.cid} → ${current.cid}) " +
+                "without LAC/TAC change"
             )
         }
         
         // Check for CID values that are too large or invalid
         if (current.cid < 0 || current.cid > 268435455) { // Max CID for LTE
             score += 5
-            anomalies.add(\"ANOMALY: Invalid CID value (${current.cid})\")
+            anomalies.add("ANOMALY: Invalid CID value (${current.cid})")
         }
         
         // Check for CID that's all zeros or all ones (suspicious)
         if (current.cid == 0L || current.cid == 268435455L) {
             score += 5
-            anomalies.add(\"ANOMALY: Suspicious CID value (${current.cid})\")
+            anomalies.add("ANOMALY: Suspicious CID value (${current.cid})")
         }
         
         return Pair(score, anomalies)
@@ -164,32 +164,32 @@ class CellTowerAnalyzer {
         var score = 0
         
         when (cell.networkType) {
-            \"GSM\" -> {
+            "GSM" -> {
                 // GSM ARFCN valid range: 0-1023 (P-GSM), 0-124 (DCS), 0-374 (PCS), 0-154 (GSM-850)
                 if (cell.arfcn < 0 || cell.arfcn > 1023) {
                     score += 8
-                    anomalies.add(\"ANOMALY: Invalid GSM ARFCN (${cell.arfcn})\")
+                    anomalies.add("ANOMALY: Invalid GSM ARFCN (${cell.arfcn})")
                 }
             }
-            \"WCDMA\" -> {
+            "WCDMA" -> {
                 // WCDMA UARFCN valid range: 0-16383
                 if (cell.uarfcn < 0 || cell.uarfcn > 16383) {
                     score += 8
-                    anomalies.add(\"ANOMALY: Invalid WCDMA UARFCN (${cell.uarfcn})\")
+                    anomalies.add("ANOMALY: Invalid WCDMA UARFCN (${cell.uarfcn})")
                 }
             }
-            \"LTE\" -> {
+            "LTE" -> {
                 // LTE EARFCN valid range: 0-262143
                 if (cell.earfcn < 0 || cell.earfcn > 262143) {
                     score += 8
-                    anomalies.add(\"ANOMALY: Invalid LTE EARFCN (${cell.earfcn})\")
+                    anomalies.add("ANOMALY: Invalid LTE EARFCN (${cell.earfcn})")
                 }
             }
-            \"NR\" -> {
+            "NR" -> {
                 // 5G NR ARFCN valid range: 0-3279165
                 if (cell.nrArfcn < 0 || cell.nrArfcn > 3279165) {
                     score += 8
-                    anomalies.add(\"ANOMALY: Invalid NR ARFCN (${cell.nrArfcn})\")
+                    anomalies.add("ANOMALY: Invalid NR ARFCN (${cell.nrArfcn})")
                 }
             }
         }
@@ -217,7 +217,7 @@ class CellTowerAnalyzer {
         if (uniqueCells >= 4 && timeSpan < 60000) {
             score += 12
             anomalies.add(
-                \"SUSPICIOUS: Tower hopping detected ($uniqueCells cells in ${timeSpan}ms)\"
+                "SUSPICIOUS: Tower hopping detected ($uniqueCells cells in ${timeSpan}ms)"
             )
         }
         
@@ -227,7 +227,7 @@ class CellTowerAnalyzer {
             if (last4[0].cid == last4[2].cid && last4[1].cid == last4[3].cid &&
                 last4[0].cid != last4[1].cid) {
                 score += 15
-                anomalies.add(\"CRITICAL: Alternating cell pattern detected (possible fake tower)\")
+                anomalies.add("CRITICAL: Alternating cell pattern detected (possible fake tower)")
             }
         }
         
@@ -247,20 +247,20 @@ class CellTowerAnalyzer {
         // Neighbor cells disappeared
         if (previous.neighborCells.isNotEmpty() && current.neighborCells.isEmpty()) {
             score += 5
-            anomalies.add(\"ANOMALY: Neighbor cells list disappeared\")
+            anomalies.add("ANOMALY: Neighbor cells list disappeared")
         }
         
         // Too many neighbor cells (suspicious)
-        val currentNeighbors = current.neighborCells.split(\",\").filter { it.isNotEmpty() }.size
+        val currentNeighbors = current.neighborCells.split(",").filter { it.isNotEmpty() }.size
         if (currentNeighbors > 10) {
             score += 3
-            anomalies.add(\"ANOMALY: Unusually high number of neighbor cells ($currentNeighbors)\")
+            anomalies.add("ANOMALY: Unusually high number of neighbor cells ($currentNeighbors)")
         }
         
         // Current cell appears in neighbor list (impossible)
         if (current.neighborCells.contains(current.cid.toString())) {
             score += 10
-            anomalies.add(\"CRITICAL: Current cell appears in neighbor list\")
+            anomalies.add("CRITICAL: Current cell appears in neighbor list")
         }
         
         return Pair(score, anomalies)

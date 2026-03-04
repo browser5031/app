@@ -19,7 +19,7 @@ class SMSReceiver : BroadcastReceiver() {
             
             try {
                 // Extract SMS messages from intent
-                val pdus = bundle?.get(\"pdus\") as? Array<*>
+                val pdus = bundle?.get("pdus") as? Array<*>
                 if (pdus != null) {
                     for (pdu in pdus) {
                         val smsMessage = SmsMessage.createFromPdu(pdu as ByteArray)
@@ -27,7 +27,7 @@ class SMSReceiver : BroadcastReceiver() {
                     }
                 }
             } catch (e: Exception) {
-                Timber.e(e, \"Error processing SMS\")
+                Timber.e(e, "Error processing SMS")
             }
         }
     }
@@ -36,8 +36,8 @@ class SMSReceiver : BroadcastReceiver() {
      * Process individual SMS message for threats.
      */
     private fun processSMS(context: Context?, smsMessage: SmsMessage) {
-        val sender = smsMessage.originatingAddress ?: \"Unknown\"
-        val body = smsMessage.messageBody ?: \"\"
+        val sender = smsMessage.originatingAddress ?: "Unknown"
+        val body = smsMessage.messageBody ?: ""
         val timestamp = smsMessage.timestampMillis
         
         // Check for silent SMS (Class 0)
@@ -45,15 +45,15 @@ class SMSReceiver : BroadcastReceiver() {
         val isSilentSMS = messageClass == SmsMessage.MessageClass.CLASS_0
         
         // Check for WAP Push
-        val isWapPush = body.contains(\"http://\") || body.contains(\"https://\")
+        val isWapPush = body.contains("http://") || body.contains("https://")
         
         // Check for suspicious patterns
         val isSuspicious = detectSuspiciousPatterns(body)
         
         if (isSilentSMS || isWapPush || isSuspicious) {
             Timber.w(
-                \"Suspicious SMS detected - From: $sender, Silent: $isSilentSMS, \" +
-                \"WapPush: $isWapPush, Suspicious: $isSuspicious\"
+                "Suspicious SMS detected - From: $sender, Silent: $isSilentSMS, " +
+                "WapPush: $isWapPush, Suspicious: $isSuspicious"
             )
             
             // TODO: Store in database
@@ -74,14 +74,14 @@ class SMSReceiver : BroadcastReceiver() {
         
         // Check for common malicious patterns
         val suspiciousPatterns = listOf(
-            \"USSD\",
-            \"*#\",
-            \"##\",
-            \"AT+\",
-            \"IMEI\",
-            \"IMSI\",
-            \"SIM\",
-            \"LOCATION\"
+            "USSD",
+            "*#",
+            "##",
+            "AT+",
+            "IMEI",
+            "IMSI",
+            "SIM",
+            "LOCATION"
         )
         
         return suspiciousPatterns.any { body.contains(it, ignoreCase = true) }
@@ -97,8 +97,8 @@ class SMSReceiver : BroadcastReceiver() {
         isWapPush: Boolean
     ) {
         Timber.d(
-            \"SMS Log - From: $sender, Body: ${body.take(50)}..., \" +
-            \"Silent: $isSilentSMS, WapPush: $isWapPush\"
+            "SMS Log - From: $sender, Body: ${body.take(50)}..., " +
+            "Silent: $isSilentSMS, WapPush: $isWapPush"
         )
         
         // TODO: Store in Realm database
@@ -106,9 +106,9 @@ class SMSReceiver : BroadcastReceiver() {
         //     sender = sender,
         //     content = body,
         //     classification = when {
-        //         isSilentSMS -> \"SILENT_SMS\"
-        //         isWapPush -> \"WAP_PUSH\"
-        //         else -> \"SUSPICIOUS\"
+        //         isSilentSMS -> "SILENT_SMS"
+        //         isWapPush -> "WAP_PUSH"
+        //         else -> "SUSPICIOUS"
         //     },
         //     messageClass = if (isSilentSMS) 0 else -1
         // )

@@ -22,9 +22,9 @@ class DatabaseRepository {
     suspend fun initialize() = withContext(Dispatchers.IO) {
         try {
             realm = Realm.open()
-            Timber.d(\"Database initialized successfully\")
+            Timber.d("Database initialized successfully")
         } catch (e: Exception) {
-            Timber.e(e, \"Failed to initialize database\")
+            Timber.e(e, "Failed to initialize database")
             throw e
         }
     }
@@ -35,9 +35,9 @@ class DatabaseRepository {
     suspend fun close() = withContext(Dispatchers.IO) {
         try {
             realm.close()
-            Timber.d(\"Database closed\")
+            Timber.d("Database closed")
         } catch (e: Exception) {
-            Timber.e(e, \"Error closing database\")
+            Timber.e(e, "Error closing database")
         }
     }
     
@@ -51,9 +51,9 @@ class DatabaseRepository {
             realm.write {
                 copyToRealm(record)
             }
-            Timber.d(\"Cell tower record inserted: LAC=${record.lac}, TAC=${record.tac}, CID=${record.cid}\")
+            Timber.d("Cell tower record inserted: LAC=${record.lac}, TAC=${record.tac}, CID=${record.cid}")
         } catch (e: Exception) {
-            Timber.e(e, \"Error inserting cell tower record\")
+            Timber.e(e, "Error inserting cell tower record")
         }
     }
     
@@ -63,11 +63,11 @@ class DatabaseRepository {
     suspend fun getAllCellTowerRecords(): List<CellTowerRecord> = withContext(Dispatchers.IO) {
         return@withContext try {
             realm.query<CellTowerRecord>()
-                .sort(\"timestamp\", Sort.DESCENDING)
+                .sort("timestamp", Sort.DESCENDING)
                 .find()
                 .toList()
         } catch (e: Exception) {
-            Timber.e(e, \"Error retrieving cell tower records\")
+            Timber.e(e, "Error retrieving cell tower records")
             emptyList()
         }
     }
@@ -78,12 +78,12 @@ class DatabaseRepository {
     suspend fun getRecentCellTowerRecords(limit: Int = 100): List<CellTowerRecord> = withContext(Dispatchers.IO) {
         return@withContext try {
             realm.query<CellTowerRecord>()
-                .sort(\"timestamp\", Sort.DESCENDING)
+                .sort("timestamp", Sort.DESCENDING)
                 .limit(limit)
                 .find()
                 .toList()
         } catch (e: Exception) {
-            Timber.e(e, \"Error retrieving recent cell tower records\")
+            Timber.e(e, "Error retrieving recent cell tower records")
             emptyList()
         }
     }
@@ -96,12 +96,12 @@ class DatabaseRepository {
         endTime: Long
     ): List<CellTowerRecord> = withContext(Dispatchers.IO) {
         return@withContext try {
-            realm.query<CellTowerRecord>(\"timestamp >= $0 AND timestamp <= $1\", startTime, endTime)
-                .sort(\"timestamp\", Sort.DESCENDING)
+            realm.query<CellTowerRecord>("timestamp >= $0 AND timestamp <= $1", startTime, endTime)
+                .sort("timestamp", Sort.DESCENDING)
                 .find()
                 .toList()
         } catch (e: Exception) {
-            Timber.e(e, \"Error retrieving cell tower records by time range\")
+            Timber.e(e, "Error retrieving cell tower records by time range")
             emptyList()
         }
     }
@@ -111,12 +111,12 @@ class DatabaseRepository {
      */
     suspend fun getCellTowerRecordsByLacTac(lac: Int, tac: Int): List<CellTowerRecord> = withContext(Dispatchers.IO) {
         return@withContext try {
-            realm.query<CellTowerRecord>(\"lac == $0 AND tac == $1\", lac, tac)
-                .sort(\"timestamp\", Sort.DESCENDING)
+            realm.query<CellTowerRecord>("lac == $0 AND tac == $1", lac, tac)
+                .sort("timestamp", Sort.DESCENDING)
                 .find()
                 .toList()
         } catch (e: Exception) {
-            Timber.e(e, \"Error retrieving cell tower records by LAC/TAC\")
+            Timber.e(e, "Error retrieving cell tower records by LAC/TAC")
             emptyList()
         }
     }
@@ -128,12 +128,12 @@ class DatabaseRepository {
         try {
             val cutoffTime = System.currentTimeMillis() - olderThanMillis
             realm.write {
-                val oldRecords = query<CellTowerRecord>(\"timestamp < $0\", cutoffTime).find()
+                val oldRecords = query<CellTowerRecord>("timestamp < $0", cutoffTime).find()
                 delete(oldRecords)
-                Timber.d(\"Deleted ${oldRecords.size} old cell tower records\")
+                Timber.d("Deleted ${oldRecords.size} old cell tower records")
             }
         } catch (e: Exception) {
-            Timber.e(e, \"Error deleting old cell tower records\")
+            Timber.e(e, "Error deleting old cell tower records")
         }
     }
     
@@ -147,9 +147,9 @@ class DatabaseRepository {
             realm.write {
                 copyToRealm(event)
             }
-            Timber.d(\"Threat event inserted: Type=${event.threatType}, Severity=${event.severity}\")
+            Timber.d("Threat event inserted: Type=${event.threatType}, Severity=${event.severity}")
         } catch (e: Exception) {
-            Timber.e(e, \"Error inserting threat event\")
+            Timber.e(e, "Error inserting threat event")
         }
     }
     
@@ -159,11 +159,11 @@ class DatabaseRepository {
     suspend fun getAllThreatEvents(): List<ThreatEvent> = withContext(Dispatchers.IO) {
         return@withContext try {
             realm.query<ThreatEvent>()
-                .sort(\"timestamp\", Sort.DESCENDING)
+                .sort("timestamp", Sort.DESCENDING)
                 .find()
                 .toList()
         } catch (e: Exception) {
-            Timber.e(e, \"Error retrieving threat events\")
+            Timber.e(e, "Error retrieving threat events")
             emptyList()
         }
     }
@@ -174,12 +174,12 @@ class DatabaseRepository {
     suspend fun getRecentThreatEvents(limit: Int = 50): List<ThreatEvent> = withContext(Dispatchers.IO) {
         return@withContext try {
             realm.query<ThreatEvent>()
-                .sort(\"timestamp\", Sort.DESCENDING)
+                .sort("timestamp", Sort.DESCENDING)
                 .limit(limit)
                 .find()
                 .toList()
         } catch (e: Exception) {
-            Timber.e(e, \"Error retrieving recent threat events\")
+            Timber.e(e, "Error retrieving recent threat events")
             emptyList()
         }
     }
@@ -189,12 +189,12 @@ class DatabaseRepository {
      */
     suspend fun getThreatEventsBySeverity(minSeverity: Int): List<ThreatEvent> = withContext(Dispatchers.IO) {
         return@withContext try {
-            realm.query<ThreatEvent>(\"severity >= $0\", minSeverity)
-                .sort(\"timestamp\", Sort.DESCENDING)
+            realm.query<ThreatEvent>("severity >= $0", minSeverity)
+                .sort("timestamp", Sort.DESCENDING)
                 .find()
                 .toList()
         } catch (e: Exception) {
-            Timber.e(e, \"Error retrieving threat events by severity\")
+            Timber.e(e, "Error retrieving threat events by severity")
             emptyList()
         }
     }
@@ -204,12 +204,12 @@ class DatabaseRepository {
      */
     suspend fun getThreatEventsByType(threatType: String): List<ThreatEvent> = withContext(Dispatchers.IO) {
         return@withContext try {
-            realm.query<ThreatEvent>(\"threatType == $0\", threatType)
-                .sort(\"timestamp\", Sort.DESCENDING)
+            realm.query<ThreatEvent>("threatType == $0", threatType)
+                .sort("timestamp", Sort.DESCENDING)
                 .find()
                 .toList()
         } catch (e: Exception) {
-            Timber.e(e, \"Error retrieving threat events by type\")
+            Timber.e(e, "Error retrieving threat events by type")
             emptyList()
         }
     }
@@ -221,12 +221,12 @@ class DatabaseRepository {
         try {
             val cutoffTime = System.currentTimeMillis() - olderThanMillis
             realm.write {
-                val oldEvents = query<ThreatEvent>(\"timestamp < $0\", cutoffTime).find()
+                val oldEvents = query<ThreatEvent>("timestamp < $0", cutoffTime).find()
                 delete(oldEvents)
-                Timber.d(\"Deleted ${oldEvents.size} old threat events\")
+                Timber.d("Deleted ${oldEvents.size} old threat events")
             }
         } catch (e: Exception) {
-            Timber.e(e, \"Error deleting old threat events\")
+            Timber.e(e, "Error deleting old threat events")
         }
     }
     
@@ -240,9 +240,9 @@ class DatabaseRepository {
             realm.write {
                 copyToRealm(smsLog)
             }
-            Timber.d(\"SMS log inserted: From=${smsLog.sender}, Classification=${smsLog.classification}\")
+            Timber.d("SMS log inserted: From=${smsLog.sender}, Classification=${smsLog.classification}")
         } catch (e: Exception) {
-            Timber.e(e, \"Error inserting SMS log\")
+            Timber.e(e, "Error inserting SMS log")
         }
     }
     
@@ -251,12 +251,12 @@ class DatabaseRepository {
      */
     suspend fun getSuspiciousSMSLogs(): List<SMSLog> = withContext(Dispatchers.IO) {
         return@withContext try {
-            realm.query<SMSLog>(\"classification != $0\", \"NORMAL\")
-                .sort(\"timestamp\", Sort.DESCENDING)
+            realm.query<SMSLog>("classification != $0", "NORMAL")
+                .sort("timestamp", Sort.DESCENDING)
                 .find()
                 .toList()
         } catch (e: Exception) {
-            Timber.e(e, \"Error retrieving suspicious SMS logs\")
+            Timber.e(e, "Error retrieving suspicious SMS logs")
             emptyList()
         }
     }
@@ -266,12 +266,12 @@ class DatabaseRepository {
      */
     suspend fun getSilentSMSLogs(): List<SMSLog> = withContext(Dispatchers.IO) {
         return@withContext try {
-            realm.query<SMSLog>(\"messageClass == $0\", 0)
-                .sort(\"timestamp\", Sort.DESCENDING)
+            realm.query<SMSLog>("messageClass == $0", 0)
+                .sort("timestamp", Sort.DESCENDING)
                 .find()
                 .toList()
         } catch (e: Exception) {
-            Timber.e(e, \"Error retrieving silent SMS logs\")
+            Timber.e(e, "Error retrieving silent SMS logs")
             emptyList()
         }
     }
@@ -283,12 +283,12 @@ class DatabaseRepository {
         try {
             val cutoffTime = System.currentTimeMillis() - olderThanMillis
             realm.write {
-                val oldLogs = query<SMSLog>(\"timestamp < $0\", cutoffTime).find()
+                val oldLogs = query<SMSLog>("timestamp < $0", cutoffTime).find()
                 delete(oldLogs)
-                Timber.d(\"Deleted ${oldLogs.size} old SMS logs\")
+                Timber.d("Deleted ${oldLogs.size} old SMS logs")
             }
         } catch (e: Exception) {
-            Timber.e(e, \"Error deleting old SMS logs\")
+            Timber.e(e, "Error deleting old SMS logs")
         }
     }
     
@@ -302,9 +302,9 @@ class DatabaseRepository {
             realm.write {
                 copyToRealm(profile)
             }
-            Timber.d(\"Baseline profile inserted: Location=${profile.locationName}\")
+            Timber.d("Baseline profile inserted: Location=${profile.locationName}")
         } catch (e: Exception) {
-            Timber.e(e, \"Error inserting baseline profile\")
+            Timber.e(e, "Error inserting baseline profile")
         }
     }
     
@@ -314,11 +314,11 @@ class DatabaseRepository {
     suspend fun getAllBaselineProfiles(): List<BaselineProfile> = withContext(Dispatchers.IO) {
         return@withContext try {
             realm.query<BaselineProfile>()
-                .sort(\"updatedAt\", Sort.DESCENDING)
+                .sort("updatedAt", Sort.DESCENDING)
                 .find()
                 .toList()
         } catch (e: Exception) {
-            Timber.e(e, \"Error retrieving baseline profiles\")
+            Timber.e(e, "Error retrieving baseline profiles")
             emptyList()
         }
     }
@@ -328,11 +328,11 @@ class DatabaseRepository {
      */
     suspend fun getBaselineProfileByLocation(locationName: String): BaselineProfile? = withContext(Dispatchers.IO) {
         return@withContext try {
-            realm.query<BaselineProfile>(\"locationName == $0\", locationName)
+            realm.query<BaselineProfile>("locationName == $0", locationName)
                 .first()
                 .find()
         } catch (e: Exception) {
-            Timber.e(e, \"Error retrieving baseline profile by location\")
+            Timber.e(e, "Error retrieving baseline profile by location")
             null
         }
     }
@@ -343,14 +343,14 @@ class DatabaseRepository {
     suspend fun deleteBaselineProfile(id: ObjectId) = withContext(Dispatchers.IO) {
         try {
             realm.write {
-                val profile = query<BaselineProfile>(\"id == $0\", id).first().find()
+                val profile = query<BaselineProfile>("id == $0", id).first().find()
                 if (profile != null) {
                     delete(profile)
-                    Timber.d(\"Baseline profile deleted\")
+                    Timber.d("Baseline profile deleted")
                 }
             }
         } catch (e: Exception) {
-            Timber.e(e, \"Error deleting baseline profile\")
+            Timber.e(e, "Error deleting baseline profile")
         }
     }
     
@@ -367,7 +367,7 @@ class DatabaseRepository {
             val baselineProfileCount = realm.query<BaselineProfile>().count().find()
             
             val recentThreats = realm.query<ThreatEvent>()
-                .sort(\"timestamp\", Sort.DESCENDING)
+                .sort("timestamp", Sort.DESCENDING)
                 .limit(1)
                 .find()
                 .toList()
@@ -380,7 +380,7 @@ class DatabaseRepository {
                 lastThreatTime = recentThreats.firstOrNull()?.timestamp ?: 0
             )
         } catch (e: Exception) {
-            Timber.e(e, \"Error retrieving database statistics\")
+            Timber.e(e, "Error retrieving database statistics")
             DatabaseStatistics()
         }
     }
@@ -393,9 +393,9 @@ class DatabaseRepository {
             realm.write {
                 deleteAll()
             }
-            Timber.d(\"All data cleared\")
+            Timber.d("All data cleared")
         } catch (e: Exception) {
-            Timber.e(e, \"Error clearing all data\")
+            Timber.e(e, "Error clearing all data")
         }
     }
 }

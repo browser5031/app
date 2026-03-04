@@ -149,4 +149,84 @@ class CellMonitoringService : Service() {
             }
             
             try {
-                @Suppress("MissingPermission\")\n                telephonyManager.registerTelephonyCallback(\n                    Dispatchers.Default.asExecutor(),\n                    telephonyCallback!!\n                )\n                Timber.d(\"Telephony callback registered\")\n            } catch (e: Exception) {\n                Timber.e(e, \"Failed to register telephony callback\")\n            }\n        }\n    }\n    \n    /**\n     * Unregister telephony callback.\n     */\n    private fun unregisterTelephonyCallback() {\n        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && telephonyCallback != null) {\n            try {\n                @Suppress(\"MissingPermission\")\n                telephonyManager.unregisterTelephonyCallback(telephonyCallback!!)\n                Timber.d(\"Telephony callback unregistered\")\n            } catch (e: Exception) {\n                Timber.e(e, \"Failed to unregister telephony callback\")\n            }\n        }\n    }\n    \n    /**\n     * Process cell information change and run threat detection.\n     */\n    private suspend fun processCellInfoChange() {\n        try {\n            val currentCell = cellInfoProvider.getCurrentCellInfo() ?: return\n            val neighbors = cellInfoProvider.getNeighboringCells()\n            \n            // Run threat analysis\n            val threatAnalysis = detectionEngine.analyzeThreat(currentCell, neighbors)\n            \n            Timber.d(\n                \"Threat Analysis: Score=${threatAnalysis.overallScore}, Level=${threatAnalysis.threatLevel}, \" +\n                \"Threats=${threatAnalysis.detectedThreats.size}\"\n            )\n            \n            // Update notification if threat detected\n            if (threatAnalysis.threatLevel in listOf(\"ORANGE\", \"RED\")) {\n                updateThreatNotification(threatAnalysis.threatLevel, threatAnalysis.overallScore)\n            }\n            \n            // TODO: Store in database\n            // TODO: Broadcast threat event to UI\n            \n        } catch (e: Exception) {\n            Timber.e(e, \"Error processing cell info change\")\n        }\n    }\n    \n    /**\n     * Update notification with threat information.\n     */\n    private fun updateThreatNotification(threatLevel: String, threatScore: Int) {\n        val intent = Intent(this, MainActivity::class.java)\n        val pendingIntent = PendingIntent.getActivity(\n            this,\n            0,\n            intent,\n            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE\n        )\n        \n        val notification = NotificationCompat.Builder(this, CHANNEL_ID)\n            .setContentTitle(\"⚠️ IMSI Catcher Threat Detected\")\n            .setContentText(\"Threat Level: $threatLevel (Score: $threatScore/100)\")\n            .setSmallIcon(R.drawable.ic_launcher_foreground)\n            .setContentIntent(pendingIntent)\n            .setAutoCancel(true)\n            .setPriority(NotificationCompat.PRIORITY_HIGH)\n            .build()\n        \n        notificationManager.notify(NOTIFICATION_ID, notification)\n    }\n}\n
+                @Suppress("MissingPermission")
+                telephonyManager.registerTelephonyCallback(
+                    Dispatchers.Default.asExecutor(),
+                    telephonyCallback!!
+                )
+                Timber.d("Telephony callback registered")
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to register telephony callback")
+            }
+        }
+    }
+    
+    /**
+     * Unregister telephony callback.
+     */
+    private fun unregisterTelephonyCallback() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && telephonyCallback != null) {
+            try {
+                @Suppress("MissingPermission")
+                telephonyManager.unregisterTelephonyCallback(telephonyCallback!!)
+                Timber.d("Telephony callback unregistered")
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to unregister telephony callback")
+            }
+        }
+    }
+    
+    /**
+     * Process cell information change and run threat detection.
+     */
+    private suspend fun processCellInfoChange() {
+        try {
+            val currentCell = cellInfoProvider.getCurrentCellInfo() ?: return
+            val neighbors = cellInfoProvider.getNeighboringCells()
+            
+            // Run threat analysis
+            val threatAnalysis = detectionEngine.analyzeThreat(currentCell, neighbors)
+            
+            Timber.d(
+                "Threat Analysis: Score=${threatAnalysis.overallScore}, Level=${threatAnalysis.threatLevel}, " +
+                "Threats=${threatAnalysis.detectedThreats.size}"
+            )
+            
+            // Update notification if threat detected
+            if (threatAnalysis.threatLevel in listOf("ORANGE", "RED")) {
+                updateThreatNotification(threatAnalysis.threatLevel, threatAnalysis.overallScore)
+            }
+            
+            // TODO: Store in database
+            // TODO: Broadcast threat event to UI
+            
+        } catch (e: Exception) {
+            Timber.e(e, "Error processing cell info change")
+        }
+    }
+    
+    /**
+     * Update notification with threat information.
+     */
+    private fun updateThreatNotification(threatLevel: String, threatScore: Int) {
+        val intent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("⚠️ IMSI Catcher Threat Detected")
+            .setContentText("Threat Level: $threatLevel (Score: $threatScore/100)")
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+        
+        notificationManager.notify(NOTIFICATION_ID, notification)
+    }
+}
+

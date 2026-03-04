@@ -51,7 +51,7 @@ fun SettingsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        \"Settings\",
+                        "Settings",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -60,7 +60,7 @@ fun SettingsScreen(
                     IconButton(onClick = onBackClick) {
                         Icon(
                             Icons.Default.ArrowBack,
-                            contentDescription = \"Back\",
+                            contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
@@ -81,18 +81,18 @@ fun SettingsScreen(
                 .padding(16.dp)
         ) {
             // Monitoring Settings
-            SettingsSectionHeader(\"Monitoring\")
+            SettingsSectionHeader("Monitoring")
             
             SettingToggleItem(
-                title = \"Background Monitoring\",
-                description = \"Monitor cell towers even when app is closed\",
+                title = "Background Monitoring",
+                description = "Monitor cell towers even when app is closed",
                 checked = backgroundMonitoring.value,
                 onCheckedChange = { backgroundMonitoring.value = it }
             )
             
             SettingToggleItem(
-                title = \"Notifications\",
-                description = \"Receive alerts for detected threats\",
+                title = "Notifications",
+                description = "Receive alerts for detected threats",
                 checked = notificationsEnabled.value,
                 onCheckedChange = { notificationsEnabled.value = it }
             )
@@ -100,11 +100,11 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
             
             // Detection Settings
-            SettingsSectionHeader(\"Detection\")
+            SettingsSectionHeader("Detection")
             
             SettingToggleItem(
-                title = \"Auto-Reset Baseline\",
-                description = \"Automatically reset baseline when location changes\",
+                title = "Auto-Reset Baseline",
+                description = "Automatically reset baseline when location changes",
                 checked = autoResetBaseline.value,
                 onCheckedChange = { autoResetBaseline.value = it }
             )
@@ -112,7 +112,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
             
             // Data Management
-            SettingsSectionHeader(\"Data Management\")
+            SettingsSectionHeader("Data Management")
             
             Button(
                 onClick = onClearDataClick,
@@ -126,13 +126,13 @@ fun SettingsScreen(
                 shape = MaterialTheme.shapes.large
             ) {
                 Text(
-                    \"Clear All Data\",
+                    "Clear All Data",
                     fontWeight = FontWeight.Bold
                 )
             }
             
             Text(
-                text = \"This will delete all threat history and cell records\",
+                text = "This will delete all threat history and cell records",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp)
@@ -141,7 +141,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
             
             // About
-            SettingsSectionHeader(\"About\")
+            SettingsSectionHeader("About")
             
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -151,10 +151,10 @@ fun SettingsScreen(
                 Column(
                     modifier = Modifier.padding(16.dp)
                 ) {
-                    InfoRow(\"App Version\", \"1.0.0\")
-                    InfoRow(\"Build\", \"Release\")
-                    InfoRow(\"Target API\", \"Android 15\")
-                    InfoRow(\"Min API\", \"Android 12\")
+                    InfoRow("App Version", "1.0.0")
+                    InfoRow("Build", "Release")
+                    InfoRow("Target API", "Android 15")
+                    InfoRow("Min API", "Android 12")
                 }
             }
             

@@ -52,7 +52,7 @@ fun HistoryScreen(
             TopAppBar(
                 title = {
                     Text(
-                        \"Threat History\",
+                        "Threat History",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -61,7 +61,7 @@ fun HistoryScreen(
                     IconButton(onClick = onBackClick) {
                         Icon(
                             Icons.Default.ArrowBack,
-                            contentDescription = \"Back\",
+                            contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
@@ -82,7 +82,7 @@ fun HistoryScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    \"No threats detected\",
+                    "No threats detected",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -110,10 +110,10 @@ fun HistoryScreen(
 @Composable
 fun ThreatEventCard(threat: ThreatEvent) {
     val threatColor = when (threat.threatLevel) {
-        \"GREEN\" -> GreenThreat
-        \"YELLOW\" -> YellowThreat
-        \"ORANGE\" -> OrangeThreat
-        \"RED\" -> RedThreat
+        "GREEN" -> GreenThreat
+        "YELLOW" -> YellowThreat
+        "ORANGE" -> OrangeThreat
+        "RED" -> RedThreat
         else -> Color.Gray
     }
     
@@ -185,14 +185,14 @@ fun ThreatEventCard(threat: ThreatEvent) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = \"Severity: ${threat.severity}/100\",
+                    text = "Severity: ${threat.severity}/100",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
                 if (threat.recommendedAction.isNotEmpty()) {
                     Text(
-                        text = \"Action: ${threat.recommendedAction.take(30)}...\",
+                        text = "Action: ${threat.recommendedAction.take(30)}...",
                         style = MaterialTheme.typography.labelSmall,
                         color = threatColor,
                         fontWeight = FontWeight.Medium
@@ -207,7 +207,7 @@ fun ThreatEventCard(threat: ThreatEvent) {
  * Format timestamp for display.
  */
 private fun formatTimestamp(timestamp: Long): String {
-    val sdf = SimpleDateFormat(\"MMM dd, HH:mm:ss\", Locale.getDefault())
+    val sdf = SimpleDateFormat("MMM dd, HH:mm:ss", Locale.getDefault())
     return sdf.format(Date(timestamp))
 }
 

@@ -32,7 +32,7 @@ class DetectorViewModel(context: Context) : ViewModel() {
     private val _threatScore = MutableStateFlow(0)
     val threatScore: StateFlow<Int> = _threatScore.asStateFlow()
     
-    private val _threatLevel = MutableStateFlow(\"GREEN\")
+    private val _threatLevel = MutableStateFlow("GREEN")
     val threatLevel: StateFlow<String> = _threatLevel.asStateFlow()
     
     private val _recentThreats = MutableStateFlow<List<ThreatEvent>>(emptyList())
@@ -55,10 +55,10 @@ class DetectorViewModel(context: Context) : ViewModel() {
         viewModelScope.launch {
             try {
                 databaseRepository.initialize()
-                Timber.d(\"Database initialized in ViewModel\")
+                Timber.d("Database initialized in ViewModel")
             } catch (e: Exception) {
-                Timber.e(e, \"Failed to initialize database\")
-                _errorMessage.value = \"Database initialization failed\"
+                Timber.e(e, "Failed to initialize database")
+                _errorMessage.value = "Database initialization failed"
             }
         }
     }
@@ -69,7 +69,7 @@ class DetectorViewModel(context: Context) : ViewModel() {
     fun startMonitoring() {
         _isMonitoring.value = true
         updateCellInformation()
-        Timber.d(\"Monitoring started\")
+        Timber.d("Monitoring started")
     }
     
     /**
@@ -77,7 +77,7 @@ class DetectorViewModel(context: Context) : ViewModel() {
      */
     fun stopMonitoring() {
         _isMonitoring.value = false
-        Timber.d(\"Monitoring stopped\")
+        Timber.d("Monitoring stopped")
     }
     
     /**
@@ -119,11 +119,11 @@ class DetectorViewModel(context: Context) : ViewModel() {
                 // Store threat event if threats detected
                 if (threatAnalysis.detectedThreats.isNotEmpty()) {
                     val threatEvent = ThreatEvent(
-                        threatType = threatAnalysis.detectedThreats.firstOrNull() ?: \"UNKNOWN\",
+                        threatType = threatAnalysis.detectedThreats.firstOrNull() ?: "UNKNOWN",
                         severity = threatAnalysis.overallScore,
                         threatLevel = threatAnalysis.threatLevel,
-                        description = threatAnalysis.detectedThreats.joinToString(\", \"),
-                        recommendedAction = threatAnalysis.recommendations.firstOrNull() ?: \"\"
+                        description = threatAnalysis.detectedThreats.joinToString(", "),
+                        recommendedAction = threatAnalysis.recommendations.firstOrNull() ?: ""
                     )
                     databaseRepository.insertThreatEvent(threatEvent)
                 }
@@ -132,13 +132,13 @@ class DetectorViewModel(context: Context) : ViewModel() {
                 loadRecentThreats()
                 
                 Timber.d(
-                    \"Cell info updated - Threat: ${threatAnalysis.threatLevel} \" +
-                    \"(Score: ${threatAnalysis.overallScore})\"
+                    "Cell info updated - Threat: ${threatAnalysis.threatLevel} " +
+                    "(Score: ${threatAnalysis.overallScore})"
                 )
                 
             } catch (e: Exception) {
-                Timber.e(e, \"Error updating cell information\")
-                _errorMessage.value = \"Error: ${e.message}\"
+                Timber.e(e, "Error updating cell information")
+                _errorMessage.value = "Error: ${e.message}"
             }
         }
     }
@@ -152,7 +152,7 @@ class DetectorViewModel(context: Context) : ViewModel() {
                 val threats = databaseRepository.getRecentThreatEvents(limit = 20)
                 _recentThreats.value = threats
             } catch (e: Exception) {
-                Timber.e(e, \"Error loading recent threats\")
+                Timber.e(e, "Error loading recent threats")
             }
         }
     }
@@ -186,8 +186,8 @@ class DetectorViewModel(context: Context) : ViewModel() {
     fun resetThreatAssessment() {
         threatAssessmentCoordinator.reset()
         _threatScore.value = 0
-        _threatLevel.value = \"GREEN\"
-        Timber.d(\"Threat assessment reset\")
+        _threatLevel.value = "GREEN"
+        Timber.d("Threat assessment reset")
     }
     
     /**
