@@ -71,7 +71,7 @@ class CellMonitoringService : Service() {
         Timber.d("CellMonitoringService destroyed")
         
         unregisterTelephonyCallback()
-        serviceScope.cancel()
+        serviceJob.cancel()
     }
     
     override fun onBind(intent: Intent?): IBinder? {

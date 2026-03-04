@@ -1,6 +1,6 @@
 package com.imsidetector.domain
 
-import com.imsidetector.data.CellTowerInfo
+import com.imsidetector.data.CellTowerRecord
 import timber.log.Timber
 
 /**
@@ -13,7 +13,7 @@ class EncryptionAnalyzer {
      * Analyze encryption status of current cell connection.
      * Returns Pair of (score, threats) where score is 0-100 (higher is worse).
      */
-    fun analyzeEncryption(cellInfo: CellTowerInfo): Pair<Int, List<String>> {
+    fun analyzeEncryption(cellInfo: CellTowerRecord): Pair<Int, List<String>> {
         var score = 0
         val threats = mutableListOf<String>()
         

@@ -11,7 +11,7 @@ import timber.log.Timber
  */
 class ThreatAssessmentCoordinator(context: Context) {
     
-    private val encryptionAnalyzer = EncryptionAnalyzer(context)
+    private val encryptionAnalyzer = EncryptionAnalyzer()
     private val signalAnalyzer = SignalAnalyzer()
     private val cellTowerAnalyzer = CellTowerAnalyzer()
     private val detectionEngine = DetectionEngine()

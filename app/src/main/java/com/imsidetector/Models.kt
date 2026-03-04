@@ -11,7 +11,7 @@ import java.util.Date
  */
 data class CellTowerRecord(
     @PrimaryKey
-    val id: ObjectId = ObjectId(),
+    val id: ObjectId = ObjectId.create(),
     val timestamp: Long = System.currentTimeMillis(),
     
     // GSM/WCDMA/LTE common
@@ -72,7 +72,7 @@ data class CellTowerRecord(
  */
 data class ThreatEvent(
     @PrimaryKey
-    val id: ObjectId = ObjectId(),
+    val id: ObjectId = ObjectId.create(),
     val timestamp: Long = System.currentTimeMillis(),
     
     // Threat classification
@@ -100,7 +100,7 @@ data class ThreatEvent(
  */
 data class BaselineProfile(
     @PrimaryKey
-    val id: ObjectId = ObjectId(),
+    val id: ObjectId = ObjectId.create(),
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     
@@ -139,7 +139,7 @@ data class BaselineProfile(
  */
 data class SMSLog(
     @PrimaryKey
-    val id: ObjectId = ObjectId(),
+    val id: ObjectId = ObjectId.create(),
     val timestamp: Long = System.currentTimeMillis(),
     
     val sender: String = "",

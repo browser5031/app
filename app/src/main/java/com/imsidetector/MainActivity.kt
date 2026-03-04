@@ -43,21 +43,18 @@ fun IMSIDetectorApp() {
         startDestination = "main"
     ) {
         composable("main") {
-            MainScreen(
-                viewModel = viewModel,
-                onNavigateToHistory = { navController.navigate("history") },
-                onNavigateToSettings = { navController.navigate("settings") }
-            )
+            MainScreen()
         }
         composable("history") {
             HistoryScreen(
-                viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() }
+                threats = emptyList(), // TODO: Get from ViewModel
+                onBackClick = { navController.popBackStack() }
             )
         }
         composable("settings") {
             SettingsScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onClearDataClick = { /* TODO: Clear data */ }
             )
         }
     }
