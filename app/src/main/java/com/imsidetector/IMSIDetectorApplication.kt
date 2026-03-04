@@ -57,8 +57,12 @@ class IMSIDetectorApplication : Application() {
     
     override fun onTerminate() {
         super.onTerminate()
-        if (::realm.isInitialized) {
-            realm.close()
+        try {
+            if (::realm.isInitialized) {
+                realm.close()
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error closing Realm")
         }
     }
 }
