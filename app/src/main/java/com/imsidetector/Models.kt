@@ -2,7 +2,7 @@ package com.imsidetector.data
 
 import io.realm.kotlin.types.RealmObject
 import io.realm.kotlin.types.annotations.PrimaryKey
-import org.mongodb.kson.ObjectId
+import io.realm.kotlin.types.ObjectId
 import java.util.Date
 
 /**

@@ -11,6 +11,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.imsidetector.ui.theme.IMSIDetectorTheme
+import com.imsidetector.ui.screens.MainScreen
+import com.imsidetector.ui.screens.HistoryScreen
+import com.imsidetector.ui.screens.SettingsScreen
+import com.imsidetector.ui.viewmodel.DetectorViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

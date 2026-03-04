@@ -380,7 +380,7 @@ fun EncryptionStatusCard(
 @Composable
 fun ActionCard(
     title: String,
-    icon: androidx.compose.material.icons.Icons,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {

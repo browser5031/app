@@ -199,7 +199,7 @@ class DetectionEngine {
             }
             
             // Detect oscillating signal (sign of fake tower)
-            val oscillations = recentSignals.zipWithNext { a, b -> if ((a - b) * (b - recentSignals.getOrNull(recentSignals.indexOf(b) + 1) ?: b) < 0) 1 else 0 }.sum()
+            val oscillations = recentSignals.zipWithNext { a, b -> if ((a - b) * (b - (recentSignals.getOrNull(recentSignals.indexOf(b) + 1) ?: b)) < 0) 1 else 0 }.sum()
             if (oscillations >= 3) {
                 score += 7
                 threats.add("ANOMALY: Oscillating signal pattern detected")

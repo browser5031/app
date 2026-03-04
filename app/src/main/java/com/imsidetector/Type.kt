@@ -2,23 +2,13 @@ package com.imsidetector.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.imsidetector.R
 
-// Font families
-val RobotoMono = FontFamily(
-    Font(R.font.roboto_mono_regular, FontWeight.Normal),
-    Font(R.font.roboto_mono_bold, FontWeight.Bold)
-)
-
-val Roboto = FontFamily(
-    Font(R.font.roboto_regular, FontWeight.Normal),
-    Font(R.font.roboto_medium, FontWeight.Medium),
-    Font(R.font.roboto_bold, FontWeight.Bold)
-)
+// Use system default fonts
+val RobotoMono = FontFamily.Monospace
+val Roboto = FontFamily.Default
 
 val Typography = Typography(
     // Display styles

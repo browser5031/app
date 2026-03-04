@@ -1,11 +1,12 @@
 package com.imsidetector.data
 
 import io.realm.kotlin.Realm
+import io.realm.kotlin.RealmConfiguration
 import io.realm.kotlin.ext.query
 import io.realm.kotlin.query.Sort
+import io.realm.kotlin.types.ObjectId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.mongodb.kson.ObjectId
 import timber.log.Timber
 
 /**
@@ -21,7 +22,15 @@ class DatabaseRepository {
      */
     suspend fun initialize() = withContext(Dispatchers.IO) {
         try {
-            realm = Realm.open()
+            val config = RealmConfiguration.create(
+                schema = setOf(
+                    CellTowerRecord::class,
+                    ThreatEvent::class,
+                    BaselineProfile::class,
+                    SMSLog::class
+                )
+            )
+            realm = Realm.open(config)
             Timber.d("Database initialized successfully")
         } catch (e: Exception) {
             Timber.e(e, "Failed to initialize database")

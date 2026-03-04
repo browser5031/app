@@ -165,7 +165,7 @@ class CellInfoProvider(private val context: Context) {
             timestamp = System.currentTimeMillis(),
             lac = identity.tac,
             tac = identity.tac,
-            cid = identity.ci,
+            cid = identity.ci.toLong(),
             earfcn = identity.earfcn,
             pci = identity.pci,
             rsrp = signal.dbm,
@@ -249,10 +249,10 @@ class CellInfoProvider(private val context: Context) {
         
         return CellTowerRecord(
             timestamp = System.currentTimeMillis(),
-            nrArfcn = identity.nrArfcn,
+            nrArfcn = identity.nrarfcn,
             nrPci = identity.pci,
             ssRsrp = signal.dbm,
-            ssRsrq = signal.rsrq,
+            ssRsrq = signal.getSsRsrq() ?: 0,
             signalStrength = signal.dbm,
             signalLevel = signal.level,
             networkType = "NR",
