@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +47,7 @@ import com.imsidetector.ui.theme.YellowThreat
  * Color Coding: Green (safe) → Yellow (caution) → Orange (warning) → Red (critical)
  * Layout: Threat indicator at top, detailed info below, navigation at bottom
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
     val currentCell = remember { mutableStateOf(CurrentCellState()) }
