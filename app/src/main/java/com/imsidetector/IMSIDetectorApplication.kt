@@ -15,7 +15,7 @@ import timber.log.Timber
 class IMSIDetectorApplication : Application() {
     
     companion object {
-        lateinit var realm: Realm
+        var realm: Realm? = null
             private set
     }
     
@@ -57,12 +57,7 @@ class IMSIDetectorApplication : Application() {
     
     override fun onTerminate() {
         super.onTerminate()
-        try {
-            if (::realm.isInitialized) {
-                realm.close()
-            }
-        } catch (e: Exception) {
-            Timber.e(e, "Error closing Realm")
-        }
+        realm?.close()
+        realm = null
     }
 }
