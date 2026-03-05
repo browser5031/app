@@ -1,7 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import "@/App.css";
 import axios from "axios";
-import { ShieldCheck, ShieldAlert, Radio, Activity, Lock, Unlock, Settings, List, Signal, Wifi, MapPin, Trash2, Power, PowerOff, ChevronRight, AlertTriangle } from "lucide-react";
+import {
+  ShieldCheck, ShieldAlert, Radio, Activity, Lock, Unlock, Settings, List, Signal,
+  Wifi, MapPin, Trash2, Power, PowerOff, ChevronRight, AlertTriangle, Search,
+  CheckCircle, XCircle, Eye, Globe, Database, Antenna
+} from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine } from "recharts";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -39,23 +43,35 @@ function ThreatGauge({ score, level }) {
 // ============= CELL INFO CARD =============
 function CellInfoCard({ cell }) {
   if (!cell) return null;
+  const verifiedColor = cell.is_verified ? "#22c55e" : "#f59e0b";
+  const VerifiedIcon = cell.is_verified ? CheckCircle : XCircle;
+
   const rows = [
     { label: "Operator", value: cell.operator_name || "---", icon: <Wifi size={12} className="text-zinc-500" /> },
     { label: "Network", value: cell.network_type || "---", icon: <Signal size={12} className="text-zinc-500" /> },
+    { label: "MCC/MNC", value: `${cell.mcc}/${cell.mnc}`, icon: <Globe size={12} className="text-zinc-500" /> },
     { label: "LAC/TAC", value: `${cell.lac}/${cell.tac}`, icon: <Radio size={12} className="text-zinc-500" /> },
     { label: "Cell ID", value: String(cell.cid), icon: <MapPin size={12} className="text-zinc-500" /> },
     { label: "EARFCN", value: cell.earfcn > 0 ? String(cell.earfcn) : "---" },
     { label: "PCI", value: cell.pci >= 0 ? String(cell.pci) : "---" },
     { label: "RSRP", value: `${cell.rsrp} dBm` },
-    { label: "RSRQ", value: `${cell.rsrq} dB` },
-    { label: "Roaming", value: cell.roaming ? "YES" : "NO" },
+    { label: "Range", value: cell.range_m ? `${cell.range_m}m` : "---" },
+    { label: "Location", value: cell.latitude ? `${cell.latitude.toFixed(4)}, ${cell.longitude.toFixed(4)}` : "---" },
   ];
 
   return (
     <div className="detector-card p-5" data-testid="cell-info-card">
-      <div className="flex items-center gap-2 mb-4">
-        <Radio size={14} className="text-emerald-500" />
-        <h3 className="text-xs font-mono uppercase tracking-widest text-zinc-500">Cell Tower</h3>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Radio size={14} className="text-emerald-500" />
+          <h3 className="text-xs font-mono uppercase tracking-widest text-zinc-500">Cell Tower</h3>
+        </div>
+        <div className="flex items-center gap-1.5" data-testid="verified-status">
+          <VerifiedIcon size={14} style={{ color: verifiedColor }} />
+          <span className="font-mono text-[10px] uppercase" style={{ color: verifiedColor }}>
+            {cell.is_verified ? "Verified" : "Unverified"}
+          </span>
+        </div>
       </div>
       <div className="space-y-2">
         {rows.map((r) => (
@@ -106,6 +122,7 @@ function SignalChart({ data }) {
     idx: i,
     signal: d.signal_strength,
     type: d.network_type,
+    verified: d.is_verified,
   }));
 
   return (
@@ -128,9 +145,11 @@ function SignalChart({ data }) {
             <ReferenceLine y={-100} stroke="#27272a" strokeDasharray="3 3" />
             <Tooltip content={({ active, payload }) => {
               if (active && payload?.[0]) {
+                const d = payload[0].payload;
                 return (
                   <div className="bg-zinc-900 border border-zinc-700 rounded px-3 py-2">
                     <p className="font-mono text-xs text-emerald-400">{payload[0].value} dBm</p>
+                    <p className="font-mono text-[10px] text-zinc-500">{d.type} {d.verified ? "Verified" : "Unverified"}</p>
                   </div>
                 );
               }
@@ -139,6 +158,50 @@ function SignalChart({ data }) {
             <Line type="monotone" dataKey="signal" stroke="#10b981" strokeWidth={2} dot={false} activeDot={{ r: 3, fill: '#10b981' }} />
           </LineChart>
         </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+// ============= NEARBY TOWERS =============
+function NearbyTowersCard({ towers }) {
+  const opName = (mcc, mnc) => {
+    const key = `${mcc}${mnc}`;
+    return { "310260": "T-Mobile", "310410": "AT&T", "311480": "Verizon" }[key] || `MCC${mcc}`;
+  };
+
+  return (
+    <div className="detector-card p-5" data-testid="nearby-towers">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Database size={14} className="text-emerald-500" />
+          <h3 className="text-xs font-mono uppercase tracking-widest text-zinc-500">Real Towers (OpenCelliD)</h3>
+        </div>
+        <span className="font-mono text-[10px] text-zinc-600">{towers?.length || 0} towers</span>
+      </div>
+      <div className="space-y-1 max-h-72 overflow-y-auto">
+        {(!towers || towers.length === 0) ? (
+          <p className="text-xs text-zinc-600 font-mono py-4 text-center">Loading real tower data...</p>
+        ) : (
+          towers.map((t, i) => (
+            <div key={`${t.cell_id}-${i}`} className="flex items-center gap-2 py-2 border-b border-zinc-800/50 last:border-0">
+              <div className="w-6 h-6 rounded bg-emerald-500/10 flex items-center justify-center shrink-0">
+                <Antenna size={12} className="text-emerald-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs text-zinc-200">{opName(t.mcc, t.mnc)}</span>
+                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">{t.radio}</span>
+                </div>
+                <p className="font-mono text-[10px] text-zinc-600 mt-0.5">CID:{t.cell_id} LAC:{t.lac}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="font-mono text-[10px] text-zinc-500">{t.range_m}m</p>
+                <CheckCircle size={10} className="text-emerald-500 ml-auto" />
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -186,7 +249,7 @@ function SessionBar({ session, isMonitoring, onToggle, onClear }) {
       <div className="flex items-center gap-4">
         <div className={`w-2 h-2 rounded-full ${isMonitoring ? 'bg-emerald-500 animate-pulse-glow' : 'bg-zinc-600'}`} />
         <span className="font-mono text-xs text-zinc-400">
-          {isMonitoring ? "MONITORING" : "PAUSED"} · {session?.total_scans || 0} scans · {session?.threats_detected || 0} threats
+          {isMonitoring ? "MONITORING" : "PAUSED"} · {session?.total_scans || 0} scans · {session?.threats_detected || 0} threats · {session?.real_towers_loaded || 0} real towers
         </span>
       </div>
       <div className="flex items-center gap-2">
@@ -235,6 +298,93 @@ function StatsRow({ analysis }) {
   );
 }
 
+// ============= TOWER LOOKUP =============
+function TowerLookup() {
+  const [mcc, setMcc] = useState("310");
+  const [mnc, setMnc] = useState("260");
+  const [lac, setLac] = useState("");
+  const [cellId, setCellId] = useState("");
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const lookup = async () => {
+    if (!lac || !cellId) return;
+    setLoading(true);
+    setError("");
+    setResult(null);
+    try {
+      const { data } = await axios.post(`${API}/tower/lookup`, {
+        mcc: parseInt(mcc), mnc: parseInt(mnc), lac: parseInt(lac), cell_id: parseInt(cellId)
+      });
+      setResult(data);
+    } catch (e) {
+      setError(e.response?.data?.detail || "Tower not found in database");
+    }
+    setLoading(false);
+  };
+
+  const opName = (mcc, mnc) => {
+    const key = `${mcc}${mnc}`;
+    return { "310260": "T-Mobile", "310410": "AT&T", "311480": "Verizon" }[key] || `Unknown`;
+  };
+
+  return (
+    <div className="detector-card p-5" data-testid="tower-lookup">
+      <div className="flex items-center gap-2 mb-4">
+        <Search size={14} className="text-emerald-500" />
+        <h3 className="text-xs font-mono uppercase tracking-widest text-zinc-500">Tower Verification</h3>
+      </div>
+      <p className="text-[10px] text-zinc-500 mb-3">Verify a cell tower against the OpenCelliD database</p>
+      <div className="grid grid-cols-4 gap-2 mb-3">
+        <div>
+          <label className="text-[10px] text-zinc-600 block mb-1">MCC</label>
+          <input value={mcc} onChange={(e) => setMcc(e.target.value)} className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-xs font-mono text-zinc-300 outline-none focus:border-emerald-500" data-testid="lookup-mcc" />
+        </div>
+        <div>
+          <label className="text-[10px] text-zinc-600 block mb-1">MNC</label>
+          <input value={mnc} onChange={(e) => setMnc(e.target.value)} className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-xs font-mono text-zinc-300 outline-none focus:border-emerald-500" data-testid="lookup-mnc" />
+        </div>
+        <div>
+          <label className="text-[10px] text-zinc-600 block mb-1">LAC</label>
+          <input value={lac} onChange={(e) => setLac(e.target.value)} placeholder="e.g. 35634" className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-xs font-mono text-zinc-300 outline-none focus:border-emerald-500 placeholder:text-zinc-700" data-testid="lookup-lac" />
+        </div>
+        <div>
+          <label className="text-[10px] text-zinc-600 block mb-1">Cell ID</label>
+          <input value={cellId} onChange={(e) => setCellId(e.target.value)} placeholder="e.g. 169594005" className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-xs font-mono text-zinc-300 outline-none focus:border-emerald-500 placeholder:text-zinc-700" data-testid="lookup-cellid" />
+        </div>
+      </div>
+      <button onClick={lookup} disabled={loading || !lac || !cellId} className="w-full flex items-center justify-center gap-2 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 rounded font-mono text-xs transition-colors" data-testid="lookup-btn">
+        <Search size={12} /> {loading ? "Searching..." : "Verify Tower"}
+      </button>
+
+      {error && (
+        <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded" data-testid="lookup-error">
+          <div className="flex items-center gap-2">
+            <XCircle size={14} className="text-red-400" />
+            <span className="font-mono text-xs text-red-400">{error}</span>
+          </div>
+          <p className="text-[10px] text-zinc-500 mt-1">This tower is NOT in the OpenCelliD database — potential IMSI catcher</p>
+        </div>
+      )}
+
+      {result && (
+        <div className="mt-3 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded" data-testid="lookup-result">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle size={14} className="text-emerald-400" />
+            <span className="font-mono text-xs text-emerald-400">Tower Verified — Legitimate</span>
+          </div>
+          <div className="space-y-1 text-[10px] font-mono text-zinc-400">
+            <p>Operator: {opName(result.mcc, result.mnc)} ({result.radio})</p>
+            <p>Location: {result.lat?.toFixed(5)}, {result.lon?.toFixed(5)}</p>
+            <p>Range: {result.range_m}m · Samples: {result.samples}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ============= MAIN APP =============
 export default function App() {
   const [dashboard, setDashboard] = useState(null);
@@ -242,16 +392,27 @@ export default function App() {
   const [page, setPage] = useState("dashboard");
   const [history, setHistory] = useState([]);
   const [settings, setSettings] = useState(null);
+  const [userLocation, setUserLocation] = useState({ lat: 37.7749, lon: -122.4194 });
   const intervalRef = useRef(null);
+
+  // Get user's real location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+        () => console.log("Geolocation denied, using default SF location")
+      );
+    }
+  }, []);
 
   const fetchDashboard = useCallback(async () => {
     try {
-      const { data } = await axios.get(`${API}/dashboard`);
+      const { data } = await axios.get(`${API}/dashboard?lat=${userLocation.lat}&lon=${userLocation.lon}`);
       setDashboard(data);
     } catch (e) {
       console.error("Dashboard fetch error:", e);
     }
-  }, []);
+  }, [userLocation]);
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -325,12 +486,13 @@ export default function App() {
           </div>
           <div>
             <h1 className="font-mono text-sm font-bold tracking-tight text-zinc-100">IMSI DETECTOR</h1>
-            <p className="text-[10px] text-zinc-600 font-mono">CELL TOWER MONITORING SYSTEM</p>
+            <p className="text-[10px] text-zinc-600 font-mono">REAL-TIME CELL TOWER MONITORING · OPENCELLID</p>
           </div>
         </div>
         <nav className="flex items-center gap-1" data-testid="nav-tabs">
           {[
             { id: "dashboard", label: "Dashboard", icon: <Activity size={14} /> },
+            { id: "lookup", label: "Lookup", icon: <Search size={14} /> },
             { id: "history", label: "History", icon: <List size={14} /> },
             { id: "settings", label: "Settings", icon: <Settings size={14} /> },
           ].map((tab) => (
@@ -367,16 +529,71 @@ export default function App() {
               <div className="md:col-span-4">
                 <CellInfoCard cell={dashboard?.current_cell} />
               </div>
-              <div className="md:col-span-8">
+              <div className="md:col-span-4">
                 <EventLog events={dashboard?.recent_events} />
+              </div>
+              <div className="md:col-span-4">
+                <NearbyTowersCard towers={dashboard?.nearby_towers} />
               </div>
             </div>
           </div>
         )}
 
+        {page === "lookup" && <LookupPage />}
         {page === "history" && <HistoryPage events={history} />}
         {page === "settings" && <SettingsPage settings={settings} onSave={updateSettings} onClear={clearData} />}
       </main>
+    </div>
+  );
+}
+
+// ============= LOOKUP PAGE =============
+function LookupPage() {
+  return (
+    <div className="max-w-2xl mx-auto space-y-6 fade-in" data-testid="lookup-page">
+      <div>
+        <h2 className="font-mono text-lg font-bold text-zinc-100">Tower Verification</h2>
+        <p className="text-xs text-zinc-500 mt-1">Check if a cell tower exists in the OpenCelliD global database. Unknown towers may be IMSI catchers.</p>
+      </div>
+      <TowerLookup />
+      <div className="detector-card p-5">
+        <h3 className="text-xs font-mono uppercase tracking-widest text-emerald-500 mb-3">Common US Carriers</h3>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { name: "T-Mobile", mcc: 310, mnc: 260 },
+            { name: "AT&T", mcc: 310, mnc: 410 },
+            { name: "Verizon", mcc: 311, mnc: 480 },
+          ].map((c) => (
+            <div key={c.name} className="bg-zinc-800/50 rounded p-3">
+              <p className="text-xs text-zinc-200 font-medium">{c.name}</p>
+              <p className="font-mono text-[10px] text-zinc-500 mt-1">MCC: {c.mcc} · MNC: {c.mnc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="detector-card p-5">
+        <h3 className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-3">How It Works</h3>
+        <div className="space-y-3 text-xs text-zinc-400">
+          <div className="flex gap-3">
+            <div className="w-6 h-6 rounded bg-emerald-500/10 flex items-center justify-center shrink-0">
+              <span className="font-mono text-emerald-400 text-[10px]">1</span>
+            </div>
+            <p>Enter the cell tower identifiers (MCC, MNC, LAC, Cell ID) from your Android device or network scanner</p>
+          </div>
+          <div className="flex gap-3">
+            <div className="w-6 h-6 rounded bg-emerald-500/10 flex items-center justify-center shrink-0">
+              <span className="font-mono text-emerald-400 text-[10px]">2</span>
+            </div>
+            <p>The system queries OpenCelliD — the world's largest open cell tower database with millions of verified entries</p>
+          </div>
+          <div className="flex gap-3">
+            <div className="w-6 h-6 rounded bg-emerald-500/10 flex items-center justify-center shrink-0">
+              <span className="font-mono text-emerald-400 text-[10px]">3</span>
+            </div>
+            <p>If the tower is NOT found, it may be an IMSI catcher — a rogue base station used to intercept communications</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -474,7 +691,7 @@ function SettingsPage({ settings, onSave, onClear }) {
       <div className="detector-card p-5">
         <h3 className="text-xs font-mono uppercase tracking-widest text-zinc-500 mb-3">About</h3>
         <div className="space-y-2">
-          {[["App", "IMSI Catcher Detector"], ["Version", "1.0.0"], ["Engine", "Threat Analysis v1"], ["Platform", "Web"]].map(([k, v]) => (
+          {[["App", "IMSI Catcher Detector"], ["Version", "1.0.0"], ["Data Source", "OpenCelliD"], ["Engine", "Threat Analysis v1"], ["Platform", "Web"]].map(([k, v]) => (
             <div key={k} className="flex justify-between py-1 border-b border-zinc-800/50 last:border-0">
               <span className="text-xs text-zinc-500">{k}</span>
               <span className="font-mono text-xs text-zinc-300">{v}</span>

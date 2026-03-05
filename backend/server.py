@@ -6,11 +6,12 @@ import os
 import logging
 import random
 import math
+import httpx
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -18,6 +19,7 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+OPENCELLID_KEY = os.environ['OPENCELLID_API_KEY']
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -34,17 +36,14 @@ class CellTowerRecord(BaseModel):
     lac: int = -1
     tac: int = -1
     cid: int = -1
+    mcc: int = -1
+    mnc: int = -1
     earfcn: int = -1
     pci: int = -1
     rsrp: int = -1
     rsrq: int = -1
-    cqi: int = -1
-    arfcn: int = -1
-    bsic: int = -1
-    rssi: int = -1
     signal_strength: int = -1
     signal_level: int = -1
-    timing_advance: int = -1
     cipher_status: str = "UNKNOWN"
     cipher_algorithm: str = ""
     network_type: str = ""
@@ -53,6 +52,9 @@ class CellTowerRecord(BaseModel):
     roaming: bool = False
     latitude: float = 0.0
     longitude: float = 0.0
+    range_m: int = 0
+    samples: int = 0
+    is_verified: bool = False
     neighbor_cells: str = ""
 
 class ThreatEvent(BaseModel):
@@ -76,6 +78,20 @@ class ThreatAnalysis(BaseModel):
     detected_threats: List[str] = []
     recommendations: List[str] = []
 
+class RealTower(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    cell_id: int = 0
+    lac: int = 0
+    mcc: int = 0
+    mnc: int = 0
+    lat: float = 0.0
+    lon: float = 0.0
+    range_m: int = 0
+    samples: int = 0
+    radio: str = ""
+    average_signal: int = 0
+    is_verified: bool = True
+
 class MonitoringSession(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -83,6 +99,7 @@ class MonitoringSession(BaseModel):
     is_active: bool = True
     total_scans: int = 0
     threats_detected: int = 0
+    real_towers_loaded: int = 0
 
 class DashboardData(BaseModel):
     current_cell: CellTowerRecord
@@ -90,6 +107,14 @@ class DashboardData(BaseModel):
     signal_history: List[dict]
     recent_events: List[ThreatEvent]
     session: MonitoringSession
+    nearby_towers: List[RealTower]
+
+class TowerLookupRequest(BaseModel):
+    mcc: int
+    mnc: int
+    lac: int
+    cell_id: int
+    radio: Optional[str] = None
 
 class SettingsModel(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -99,14 +124,80 @@ class SettingsModel(BaseModel):
     auto_reset_baseline: bool = False
     scan_interval_seconds: int = 5
     threat_sensitivity: str = "medium"
+    user_lat: float = 37.7749
+    user_lon: float = -122.4194
 
-# ============= DETECTION ENGINE =============
+# ============= OPENCELLID CLIENT =============
+
+class OpenCellIDClient:
+    BASE_URL = "https://opencellid.org"
+
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.http = httpx.AsyncClient(timeout=15.0)
+
+    async def lookup_cell(self, mcc: int, mnc: int, lac: int, cell_id: int, radio: str = None) -> Optional[dict]:
+        params = {
+            "key": self.api_key,
+            "mcc": mcc,
+            "mnc": mnc,
+            "lac": lac,
+            "cellid": cell_id,
+            "format": "json"
+        }
+        if radio:
+            params["radio"] = radio
+        try:
+            resp = await self.http.get(f"{self.BASE_URL}/cell/get", params=params)
+            if resp.status_code == 200:
+                data = resp.json()
+                if "error" not in data:
+                    return data
+            logger.warning(f"OpenCelliD lookup failed: {resp.status_code} {resp.text[:200]}")
+            return None
+        except Exception as e:
+            logger.error(f"OpenCelliD request error: {e}")
+            return None
+
+    async def get_nearby_cells(self, lat: float, lon: float, radius_km: float = 0.5) -> List[dict]:
+        delta_lat = radius_km / 111.0
+        delta_lon = radius_km / (111.0 * max(0.01, math.cos(math.radians(lat))))
+        bbox = f"{lat - delta_lat},{lon - delta_lon},{lat + delta_lat},{lon + delta_lon}"
+        params = {
+            "key": self.api_key,
+            "BBOX": bbox,
+            "format": "json",
+            "limit": 50
+        }
+        try:
+            resp = await self.http.get(f"{self.BASE_URL}/cell/getInArea", params=params)
+            if resp.status_code == 200:
+                data = resp.json()
+                if isinstance(data, dict) and "cells" in data:
+                    return data["cells"]
+                if isinstance(data, list):
+                    return data
+            logger.warning(f"OpenCelliD area failed: {resp.status_code} {resp.text[:200]}")
+            return []
+        except Exception as e:
+            logger.error(f"OpenCelliD area error: {e}")
+            return []
+
+ocid = OpenCellIDClient(OPENCELLID_KEY)
+
+# ============= DETECTION ENGINE (REAL DATA) =============
 
 class DetectionEngine:
     def __init__(self):
         self.signal_history = []
         self.cell_history = []
+        self.known_towers = {}
         self.previous_network_type = ""
+
+    def register_known_towers(self, towers: List[dict]):
+        for t in towers:
+            key = f"{t.get('mcc',0)}-{t.get('mnc',0)}-{t.get('lac',0)}-{t.get('cellid', t.get('cell_id', 0))}"
+            self.known_towers[key] = t
 
     def analyze_threat(self, cell: CellTowerRecord) -> ThreatAnalysis:
         threats = []
@@ -116,13 +207,11 @@ class DetectionEngine:
         cell_score = self._analyze_cell_consistency(cell, threats)
         sig_score = self._analyze_signal(cell, threats)
         proto_score = self._analyze_protocol(cell, threats)
+        verify_score = self._verify_against_known(cell, threats)
 
-        overall = int(
-            enc_score * 0.45 +
-            cell_score * 0.30 +
-            sig_score * 0.15 +
-            proto_score * 0.10
-        )
+        cell_score += verify_score
+
+        overall = int(enc_score * 0.40 + cell_score * 0.30 + sig_score * 0.15 + proto_score * 0.15)
         overall = min(overall, 100)
 
         level = "GREEN"
@@ -131,14 +220,14 @@ class DetectionEngine:
         elif overall > 20: level = "YELLOW"
 
         if not threats:
-            recommendations.append("Network appears secure - no threats detected")
+            recommendations.append("All towers verified against OpenCelliD - network secure")
         else:
             if enc_score > 0:
-                recommendations.append("Ensure strong encryption (A5/3 or better)")
-            if cell_score > 0:
-                recommendations.append("Monitor cell tower changes")
+                recommendations.append("Weak encryption detected - avoid sensitive communications")
+            if verify_score > 0:
+                recommendations.append("Unverified tower detected - possible IMSI catcher")
             if sig_score > 0:
-                recommendations.append("Check signal strength trends")
+                recommendations.append("Signal anomaly - monitor for fake tower indicators")
 
         self.cell_history.append(cell)
         if len(self.cell_history) > 100:
@@ -155,6 +244,30 @@ class DetectionEngine:
             detected_threats=threats,
             recommendations=recommendations
         )
+
+    def _verify_against_known(self, cell: CellTowerRecord, threats: list) -> int:
+        if not self.known_towers:
+            return 0
+        key = f"{cell.mcc}-{cell.mnc}-{cell.lac}-{cell.cid}"
+        if key in self.known_towers:
+            known = self.known_towers[key]
+            dist = self._haversine(cell.latitude, cell.longitude, known.get("lat", 0), known.get("lon", 0))
+            if dist > 5.0:
+                threats.append(f"SUSPICIOUS: Tower {cell.cid} is {dist:.1f}km from registered location")
+                return 25
+            return 0
+        else:
+            if cell.cid > 0 and cell.mcc > 0:
+                threats.append(f"UNVERIFIED: Tower CID {cell.cid} not found in OpenCelliD database")
+                return 15
+        return 0
+
+    def _haversine(self, lat1, lon1, lat2, lon2):
+        R = 6371
+        dlat = math.radians(lat2 - lat1)
+        dlon = math.radians(lon2 - lon1)
+        a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
+        return R * 2 * math.asin(math.sqrt(a))
 
     def _analyze_encryption(self, cell: CellTowerRecord, threats: list) -> int:
         score = 0
@@ -173,7 +286,6 @@ class DetectionEngine:
         score = 0
         if len(self.cell_history) < 2:
             return score
-
         prev = self.cell_history[-1]
         if prev.lac != cell.lac or prev.tac != cell.tac:
             score += 15
@@ -207,75 +319,120 @@ class DetectionEngine:
 
 engine = DetectionEngine()
 active_session = MonitoringSession()
+cached_nearby_towers: List[RealTower] = []
 
-# ============= SIMULATION ENGINE =============
+# ============= REAL DATA GENERATION =============
 
-OPERATORS = [
-    {"name": "T-Mobile", "code": "310260"},
-    {"name": "AT&T", "code": "310410"},
-    {"name": "Verizon", "code": "311480"},
-]
+US_OPERATORS = {
+    "310260": {"name": "T-Mobile", "mcc": 310, "mnc": 260},
+    "310410": {"name": "AT&T", "mcc": 310, "mnc": 410},
+    "311480": {"name": "Verizon", "mcc": 311, "mnc": 480},
+}
 
-def generate_cell_data(inject_threat: bool = False) -> CellTowerRecord:
-    op = random.choice(OPERATORS)
-    net_type = random.choices(["NR", "LTE", "WCDMA", "GSM"], weights=[35, 45, 15, 5])[0]
+def generate_cell_from_real_towers(real_towers: List[RealTower], inject_threat: bool = False) -> CellTowerRecord:
+    """Generate cell data based on REAL tower data from OpenCelliD."""
+    if real_towers and not inject_threat:
+        tower = random.choice(real_towers)
+        net_type = tower.radio.upper() if tower.radio else "LTE"
+        if net_type == "UMTS": net_type = "WCDMA"
+        base_signal = tower.average_signal if tower.average_signal else -80
+        if base_signal == 0: base_signal = -80
+        signal = base_signal + random.randint(-8, 8)
+        signal = max(-120, min(-40, signal))
+        level = max(0, min(4, (signal + 120) // 20))
 
-    base_rsrp = {"NR": -85, "LTE": -80, "WCDMA": -85, "GSM": -75}[net_type]
-    signal = base_rsrp + random.randint(-15, 15)
-    level = max(0, min(4, (signal + 120) // 20))
+        op_key = f"{tower.mcc}{tower.mnc}"
+        op = US_OPERATORS.get(op_key, {"name": f"MCC{tower.mcc}/MNC{tower.mnc}", "mcc": tower.mcc, "mnc": tower.mnc})
 
+        return CellTowerRecord(
+            lac=tower.lac, tac=tower.lac, cid=tower.cell_id,
+            mcc=tower.mcc, mnc=tower.mnc,
+            pci=random.randint(0, 503) if net_type in ("LTE", "NR") else -1,
+            earfcn=random.randint(100, 65535) if net_type == "LTE" else -1,
+            rsrp=signal, rsrq=random.randint(-20, -3),
+            signal_strength=signal, signal_level=level,
+            cipher_status="ENCRYPTED", cipher_algorithm="A5/3",
+            network_type=net_type,
+            operator_name=op["name"], operator_code=f"{tower.mcc}{tower.mnc}",
+            latitude=tower.lat, longitude=tower.lon,
+            range_m=tower.range_m, samples=tower.samples,
+            is_verified=True,
+        )
+
+    # Inject a suspicious/unverified tower for threat simulation
+    op = random.choice(list(US_OPERATORS.values()))
+    threat_type = random.choice(["unverified", "encryption", "signal", "downgrade"])
+    net_type = "LTE"
     cipher_status = "ENCRYPTED"
     cipher_algo = "A5/3"
-    lac = random.randint(1000, 9999)
-    tac = random.randint(1000, 9999)
-    cid = random.randint(10000, 99999)
+    signal = -80 + random.randint(-10, 10)
+    fake_lat = 37.7749 + random.uniform(-0.005, 0.005)
+    fake_lon = -122.4194 + random.uniform(-0.005, 0.005)
+    fake_cid = random.randint(900000, 999999)
+    fake_lac = random.randint(60000, 65000)
 
-    if inject_threat:
-        threat_type = random.choice(["encryption", "signal", "downgrade", "cell_change"])
-        if threat_type == "encryption":
-            cipher_status = random.choice(["UNENCRYPTED", "DOWNGRADED"])
-            cipher_algo = random.choice(["A5/0", "A5/1"])
-            net_type = "GSM"
-        elif threat_type == "signal":
-            signal = random.randint(-45, -30)
-            level = 4
-        elif threat_type == "downgrade":
-            net_type = "GSM"
-            cipher_algo = "A5/1"
-        elif threat_type == "cell_change":
-            lac = random.randint(50000, 65000)
-            tac = random.randint(50000, 65000)
+    if threat_type == "encryption":
+        cipher_status = random.choice(["UNENCRYPTED", "DOWNGRADED"])
+        cipher_algo = random.choice(["A5/0", "A5/1"])
+        net_type = "GSM"
+    elif threat_type == "signal":
+        signal = random.randint(-45, -30)
+    elif threat_type == "downgrade":
+        net_type = "GSM"
+        cipher_algo = "A5/1"
 
     return CellTowerRecord(
-        lac=lac, tac=tac, cid=cid,
-        earfcn=random.randint(100, 65535) if net_type == "LTE" else -1,
-        pci=random.randint(0, 503) if net_type in ("LTE", "NR") else -1,
+        lac=fake_lac, tac=fake_lac, cid=fake_cid,
+        mcc=op["mcc"], mnc=op["mnc"],
+        pci=random.randint(0, 503), earfcn=random.randint(100, 65535),
         rsrp=signal, rsrq=random.randint(-20, -3),
-        signal_strength=signal, signal_level=level,
+        signal_strength=signal, signal_level=max(0, min(4, (signal + 120) // 20)),
         cipher_status=cipher_status, cipher_algorithm=cipher_algo,
         network_type=net_type,
-        operator_name=op["name"], operator_code=op["code"],
-        latitude=37.7749 + random.uniform(-0.01, 0.01),
-        longitude=-122.4194 + random.uniform(-0.01, 0.01),
+        operator_name=op["name"], operator_code=f"{op['mcc']}{op['mnc']}",
+        latitude=fake_lat, longitude=fake_lon,
+        range_m=random.randint(100, 5000), samples=0,
+        is_verified=False,
     )
 
 # ============= API ENDPOINTS =============
 
 @api_router.get("/")
 async def root():
-    return {"message": "IMSI Catcher Detector API v1.0"}
+    return {"message": "IMSI Catcher Detector API v1.0 - Real Data"}
 
 @api_router.get("/dashboard", response_model=DashboardData)
-async def get_dashboard():
-    inject_threat = random.random() < 0.15
-    cell = generate_cell_data(inject_threat=inject_threat)
+async def get_dashboard(lat: float = Query(default=37.7749), lon: float = Query(default=-122.4194)):
+    global cached_nearby_towers
+
+    # Fetch real nearby towers if cache empty or location changed
+    if not cached_nearby_towers:
+        raw_towers = await ocid.get_nearby_cells(lat, lon, radius_km=0.5)
+        cached_nearby_towers = []
+        for t in raw_towers[:50]:
+            cached_nearby_towers.append(RealTower(
+                cell_id=t.get("cellid", t.get("cell_id", 0)),
+                lac=t.get("lac", 0),
+                mcc=t.get("mcc", 0),
+                mnc=t.get("mnc", 0),
+                lat=float(t.get("lat", 0)),
+                lon=float(t.get("lon", 0)),
+                range_m=int(t.get("range", 0)),
+                samples=int(t.get("samples", 0)),
+                radio=t.get("radio", "LTE"),
+                average_signal=int(t.get("averageSignalStrength", 0)),
+            ))
+        engine.register_known_towers(raw_towers)
+        active_session.real_towers_loaded = len(cached_nearby_towers)
+        logger.info(f"Loaded {len(cached_nearby_towers)} real towers from OpenCelliD near ({lat}, {lon})")
+
+    inject_threat = random.random() < 0.12
+    cell = generate_cell_from_real_towers(cached_nearby_towers, inject_threat=inject_threat)
     analysis = engine.analyze_threat(cell)
 
-    # Store cell record
     cell_doc = cell.model_dump()
     await db.cell_records.insert_one(cell_doc)
 
-    # Store threat events
     events_to_return = []
     if analysis.detected_threats:
         active_session.threats_detected += 1
@@ -293,14 +450,12 @@ async def get_dashboard():
 
     active_session.total_scans += 1
 
-    # Build signal history from last 30 records
     recent_cells = await db.cell_records.find({}, {"_id": 0}).sort("timestamp", -1).limit(30).to_list(30)
     signal_history = [
-        {"timestamp": c.get("timestamp", ""), "signal_strength": c.get("signal_strength", -80), "network_type": c.get("network_type", "")}
+        {"timestamp": c.get("timestamp", ""), "signal_strength": c.get("signal_strength", -80), "network_type": c.get("network_type", ""), "is_verified": c.get("is_verified", False)}
         for c in reversed(recent_cells)
     ]
 
-    # Get recent events
     recent_events_raw = await db.threat_events.find({}, {"_id": 0}).sort("timestamp", -1).limit(20).to_list(20)
     recent_events = [ThreatEvent(**e) for e in recent_events_raw]
 
@@ -310,7 +465,48 @@ async def get_dashboard():
         signal_history=signal_history,
         recent_events=recent_events,
         session=active_session,
+        nearby_towers=cached_nearby_towers[:20],
     )
+
+@api_router.post("/tower/lookup", response_model=Optional[RealTower])
+async def lookup_tower(req: TowerLookupRequest):
+    result = await ocid.lookup_cell(req.mcc, req.mnc, req.lac, req.cell_id, req.radio)
+    if not result:
+        raise HTTPException(status_code=404, detail="Tower not found in OpenCelliD database")
+    return RealTower(
+        cell_id=result.get("cellid", result.get("cell_id", req.cell_id)),
+        lac=result.get("lac", req.lac),
+        mcc=result.get("mcc", req.mcc),
+        mnc=result.get("mnc", req.mnc),
+        lat=float(result.get("lat", 0)),
+        lon=float(result.get("lon", 0)),
+        range_m=int(result.get("range", 0)),
+        samples=int(result.get("samples", 0)),
+        radio=result.get("radio", ""),
+        average_signal=int(result.get("averageSignalStrength", 0)),
+    )
+
+@api_router.get("/towers/nearby", response_model=List[RealTower])
+async def get_nearby_towers(lat: float = 37.7749, lon: float = -122.4194, radius_km: float = 0.5):
+    global cached_nearby_towers
+    raw_towers = await ocid.get_nearby_cells(lat, lon, radius_km)
+    cached_nearby_towers = []
+    for t in raw_towers[:50]:
+        cached_nearby_towers.append(RealTower(
+            cell_id=t.get("cellid", t.get("cell_id", 0)),
+            lac=t.get("lac", 0),
+            mcc=t.get("mcc", 0),
+            mnc=t.get("mnc", 0),
+            lat=float(t.get("lat", 0)),
+            lon=float(t.get("lon", 0)),
+            range_m=int(t.get("range", 0)),
+            samples=int(t.get("samples", 0)),
+            radio=t.get("radio", "LTE"),
+            average_signal=int(t.get("averageSignalStrength", 0)),
+        ))
+    engine.register_known_towers(raw_towers)
+    active_session.real_towers_loaded = len(cached_nearby_towers)
+    return cached_nearby_towers
 
 @api_router.get("/history", response_model=List[ThreatEvent])
 async def get_history(skip: int = 0, limit: int = 50):
@@ -335,12 +531,18 @@ async def get_settings():
 async def update_settings(settings: SettingsModel):
     settings.id = "default"
     await db.settings.update_one({"id": "default"}, {"$set": settings.model_dump()}, upsert=True)
+
+    # Refresh towers if location changed
+    global cached_nearby_towers
+    cached_nearby_towers = []
+
     return settings
 
 @api_router.post("/session/start", response_model=MonitoringSession)
 async def start_session():
-    global active_session
+    global active_session, cached_nearby_towers
     active_session = MonitoringSession()
+    cached_nearby_towers = []
     return active_session
 
 @api_router.post("/session/stop", response_model=MonitoringSession)
@@ -351,8 +553,10 @@ async def stop_session():
 
 @api_router.delete("/data")
 async def clear_data():
+    global cached_nearby_towers
     await db.cell_records.delete_many({})
     await db.threat_events.delete_many({})
+    cached_nearby_towers = []
     return {"message": "All data cleared"}
 
 @api_router.get("/stats")
@@ -366,9 +570,9 @@ async def get_stats():
         "high_severity_threats": high_threats,
         "session_active": active_session.is_active,
         "session_scans": active_session.total_scans,
+        "real_towers_loaded": active_session.real_towers_loaded,
     }
 
-# Include router and middleware
 app.include_router(api_router)
 
 app.add_middleware(
