@@ -1,0 +1,154 @@
+{
+  "design_system": {
+    "typography": {
+      "font_family": {
+        "heading": "JetBrains Mono, monospace",
+        "body": "Inter, sans-serif",
+        "mono": "JetBrains Mono, monospace"
+      },
+      "scale": {
+        "h1": "text-4xl font-bold tracking-tight",
+        "h2": "text-3xl font-bold tracking-tight",
+        "h3": "text-2xl font-semibold tracking-tight",
+        "p": "text-base leading-7",
+        "small": "text-sm font-medium leading-none",
+        "tiny": "text-xs font-medium uppercase tracking-wider"
+      }
+    },
+    "colors": {
+      "background": "#09090b",
+      "foreground": "#fafafa",
+      "card": "#121212",
+      "card_foreground": "#fafafa",
+      "popover": "#09090b",
+      "popover_foreground": "#fafafa",
+      "primary": "#10b981",
+      "primary_foreground": "#000000",
+      "secondary": "#27272a",
+      "secondary_foreground": "#fafafa",
+      "muted": "#27272a",
+      "muted_foreground": "#a1a1aa",
+      "accent": "#27272a",
+      "accent_foreground": "#fafafa",
+      "destructive": "#ef4444",
+      "destructive_foreground": "#fafafa",
+      "border": "#27272a",
+      "input": "#27272a",
+      "ring": "#10b981",
+      "custom": {
+        "success": "#22c55e",
+        "warning": "#f59e0b",
+        "danger": "#ef4444",
+        "info": "#3b82f6",
+        "chart_grid": "#333333",
+        "scanline": "rgba(0, 255, 0, 0.1)"
+      }
+    },
+    "spacing": {
+      "container_padding": "p-6 md:p-8 lg:p-12",
+      "section_gap": "gap-6 md:gap-8",
+      "component_padding": "p-6"
+    },
+    "borders": {
+      "radius": "rounded-md",
+      "width": "border",
+      "style": "solid"
+    },
+    "shadows": {
+      "card": "shadow-lg shadow-black/50",
+      "glow_green": "0 0 10px rgba(16, 185, 129, 0.5)",
+      "glow_red": "0 0 10px rgba(239, 68, 68, 0.5)"
+    }
+  },
+  "layout_strategies": {
+    "dashboard": {
+      "type": "bento_grid",
+      "grid_cols": "grid-cols-1 md:grid-cols-12",
+      "gap": "gap-4 md:gap-6",
+      "areas": [
+        {
+          "name": "threat_gauge",
+          "span": "col-span-1 md:col-span-4 lg:col-span-3 row-span-2",
+          "description": "Circular threat level indicator with real-time score"
+        },
+        {
+          "name": "main_map",
+          "span": "col-span-1 md:col-span-8 lg:col-span-6 row-span-2",
+          "description": "Live map showing cell towers and user location"
+        },
+        {
+          "name": "cell_info",
+          "span": "col-span-1 md:col-span-12 lg:col-span-3 row-span-2",
+          "description": "Detailed technical info of current connection (LAC, CID, etc.)"
+        },
+        {
+          "name": "signal_graph",
+          "span": "col-span-1 md:col-span-8 lg:col-span-9",
+          "description": "Real-time line chart of signal strength (dBm)"
+        },
+        {
+          "name": "encryption_status",
+          "span": "col-span-1 md:col-span-4 lg:col-span-3",
+          "description": "Status of cipher algorithms (A5/1, A5/3, GEA, etc.)"
+        },
+        {
+          "name": "recent_logs",
+          "span": "col-span-1 md:col-span-12",
+          "description": "Scrollable list of recent events and detections"
+        }
+      ]
+    }
+  },
+  "components": {
+    "ui_library": "shadcn/ui",
+    "custom_components": [
+      {
+        "name": "ThreatGauge",
+        "description": "A circular gauge component using SVG or Recharts to show threat level (0-100). Colors change from Green (Low) to Red (Critical).",
+        "props": ["score", "level"]
+      },
+      {
+        "name": "SignalChart",
+        "description": "A real-time updating line chart using Recharts. Y-axis is dBm (-50 to -120). X-axis is time.",
+        "library": "recharts"
+      },
+      {
+        "name": "CellInfoCard",
+        "description": "A card displaying key-value pairs of cell info. Uses monospace font for values.",
+        "props": ["lac", "cid", "tac", "mcc", "mnc", "rat"]
+      },
+      {
+        "name": "LogFeed",
+        "description": "A terminal-like list of events with timestamps and severity badges.",
+        "props": ["logs"]
+      },
+      {
+        "name": "RadarScan",
+        "description": "A CSS animation overlay that simulates a radar sweep over the map or dashboard.",
+        "type": "visual_effect"
+      }
+    ]
+  },
+  "assets": {
+    "images": [
+      {
+        "category": "background",
+        "url": "https://images.unsplash.com/photo-1712230983973-6bf75ad1476e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHw0fHxkYXJrJTIwY3liZXIlMjBtYXAlMjBodWQlMjBiYWNrZ3JvdW5kfGVufDB8fHx8MTc3MjY3ODU4MXww&ixlib=rb-4.1.0&q=85",
+        "description": "Subtle digital grid texture for dashboard background (use with low opacity)"
+      }
+    ],
+    "icons": {
+      "library": "lucide-react",
+      "suggestions": ["Signal", "ShieldAlert", "ShieldCheck", "Radio", "Activity", "Lock", "Unlock", "MapPin", "List", "Settings"]
+    }
+  },
+  "universal_guidelines": [
+    "Use 'JetBrains Mono' for all numeric data and IDs (LAC, CID, IMSI).",
+    "Ensure high contrast for all text. Avoid dark grey on black.",
+    "Use neon accents sparingly to draw attention to status changes.",
+    "Implement a 'scanline' effect using CSS pointer-events-none overlay for the 'hacker' feel.",
+    "Animations should be mechanical and precise (e.g., instant ease-out), not bouncy.",
+    "All cards must have a subtle border: border border-white/10.",
+    "Use data-testid attributes for all interactive elements."
+  ]
+}
