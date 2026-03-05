@@ -20,28 +20,19 @@ import androidx.core.content.getSystemService
 import com.imsidetector.data.CellTowerRecord
 import timber.log.Timber
 
-/**
- * Provides access to cellular information from Android TelephonyManager.
- * Abstracts the complexity of different cell types (GSM, WCDMA, LTE, NR).
- */
 class CellInfoProvider(private val context: Context) {
-    
+
     private val telephonyManager = context.getSystemService<TelephonyManager>()
-    
-    /**
-     * Get current cell information as CellTowerRecord.
-     */
+
     fun getCurrentCellInfo(): CellTowerRecord? {
         return try {
+            @Suppress("MissingPermission")
             val cellInfoList = telephonyManager?.allCellInfo ?: return null
-            
-            // Find the registered cell (first registered cell in the list)
             val registeredCell = cellInfoList.firstOrNull { it.isRegistered }
-            
+
             if (registeredCell != null) {
                 parseCellInfo(registeredCell)
             } else if (cellInfoList.isNotEmpty()) {
-                // Fallback to first cell if no registered cell found
                 parseCellInfo(cellInfoList[0])
             } else {
                 null
@@ -51,97 +42,36 @@ class CellInfoProvider(private val context: Context) {
             null
         }
     }
-    
-    /**
-     * Get all neighboring cells.
-     */
+
     fun getNeighboringCells(): List<CellTowerRecord> {
         return try {
+            @Suppress("MissingPermission")
             val cellInfoList = telephonyManager?.allCellInfo ?: return emptyList()
-            
-            cellInfoList.filter { !it.isRegistered }
-                .mapNotNull { parseCellInfo(it) }
+            cellInfoList.filter { !it.isRegistered }.mapNotNull { parseCellInfo(it) }
         } catch (e: Exception) {
             Timber.e(e, "Error getting neighboring cells")
             emptyList()
         }
     }
-    
-    /**
-     * Get service state information.
-     */
-    fun getServiceState(): ServiceState? {
-        return try {
-            @Suppress("MissingPermission")
-            telephonyManager?.serviceState
-        } catch (e: Exception) {
-            Timber.e(e, "Error getting service state")
-            null
-        }
-    }
-    
-    /**
-     * Get operator information.
-     */
+
     fun getOperatorInfo(): Pair<String, String> {
         return try {
             val operatorName = telephonyManager?.networkOperatorName ?: "Unknown"
             val operatorCode = telephonyManager?.networkOperator ?: "Unknown"
             Pair(operatorName, operatorCode)
         } catch (e: Exception) {
-            Timber.e(e, "Error getting operator info")
             Pair("Unknown", "Unknown")
         }
     }
-    
-    /**
-     * Get network type.
-     */
-    fun getNetworkType(): String {
-        return try {
-            @Suppress("MissingPermission")
-            when (telephonyManager?.dataNetworkType) {
-                TelephonyManager.NETWORK_TYPE_GSM -> "GSM"
-                TelephonyManager.NETWORK_TYPE_EDGE -> "EDGE"
-                TelephonyManager.NETWORK_TYPE_UMTS -> "WCDMA"
-                TelephonyManager.NETWORK_TYPE_CDMA -> "CDMA"
-                TelephonyManager.NETWORK_TYPE_EVDO_0 -> "EVDO_0"
-                TelephonyManager.NETWORK_TYPE_EVDO_A -> "EVDO_A"
-                TelephonyManager.NETWORK_TYPE_1xRTT -> "1xRTT"
-                TelephonyManager.NETWORK_TYPE_HSDPA -> "HSDPA"
-                TelephonyManager.NETWORK_TYPE_HSUPA -> "HSUPA"
-                TelephonyManager.NETWORK_TYPE_HSPA -> "HSPA"
-                TelephonyManager.NETWORK_TYPE_IDEN -> "IDEN"
-                TelephonyManager.NETWORK_TYPE_EVDO_B -> "EVDO_B"
-                TelephonyManager.NETWORK_TYPE_LTE -> "LTE"
-                TelephonyManager.NETWORK_TYPE_EHRPD -> "EHRPD"
-                TelephonyManager.NETWORK_TYPE_HSPAP -> "HSPAP"
-                TelephonyManager.NETWORK_TYPE_TD_SCDMA -> "TD_SCDMA"
-                TelephonyManager.NETWORK_TYPE_IWLAN -> "IWLAN"
-                TelephonyManager.NETWORK_TYPE_NR -> "NR"
-                else -> "UNKNOWN"
-            }
-        } catch (e: Exception) {
-            Timber.e(e, "Error getting network type")
-            "UNKNOWN"
-        }
-    }
-    
-    /**
-     * Check if device is roaming.
-     */
+
     fun isRoaming(): Boolean {
         return try {
             telephonyManager?.isNetworkRoaming ?: false
         } catch (e: Exception) {
-            Timber.e(e, "Error checking roaming status")
             false
         }
     }
-    
-    /**
-     * Parse CellInfo object into CellTowerRecord.
-     */
+
     private fun parseCellInfo(cellInfo: CellInfo): CellTowerRecord? {
         return when (cellInfo) {
             is CellInfoLte -> parseLteCell(cellInfo)
@@ -151,16 +81,12 @@ class CellInfoProvider(private val context: Context) {
             else -> null
         }
     }
-    
-    /**
-     * Parse LTE cell information.
-     */
+
     private fun parseLteCell(cellInfo: CellInfoLte): CellTowerRecord {
-        val identity = cellInfo.cellIdentity as CellIdentityLte
-        val signal = cellInfo.cellSignalStrength as CellSignalStrengthLte
-        
+        val identity = cellInfo.cellIdentity
+        val signal = cellInfo.cellSignalStrength
         val (operatorName, operatorCode) = getOperatorInfo()
-        
+
         return CellTowerRecord(
             timestamp = System.currentTimeMillis(),
             lac = identity.tac,
@@ -178,20 +104,16 @@ class CellInfoProvider(private val context: Context) {
             operatorName = operatorName,
             operatorCode = operatorCode,
             roaming = isRoaming(),
-            cipherStatus = "ENCRYPTED", // Will be updated by encryption monitor
+            cipherStatus = "ENCRYPTED",
             cipherAlgorithm = "A5/3"
         )
     }
-    
-    /**
-     * Parse GSM cell information.
-     */
+
     private fun parseGsmCell(cellInfo: CellInfoGsm): CellTowerRecord {
-        val identity = cellInfo.cellIdentity as CellIdentityGsm
-        val signal = cellInfo.cellSignalStrength as CellSignalStrengthGsm
-        
+        val identity = cellInfo.cellIdentity
+        val signal = cellInfo.cellSignalStrength
         val (operatorName, operatorCode) = getOperatorInfo()
-        
+
         return CellTowerRecord(
             timestamp = System.currentTimeMillis(),
             lac = identity.lac,
@@ -210,16 +132,12 @@ class CellInfoProvider(private val context: Context) {
             cipherAlgorithm = "A5/3"
         )
     }
-    
-    /**
-     * Parse WCDMA (3G) cell information.
-     */
+
     private fun parseWcdmaCell(cellInfo: CellInfoWcdma): CellTowerRecord {
-        val identity = cellInfo.cellIdentity as CellIdentityWcdma
-        val signal = cellInfo.cellSignalStrength as CellSignalStrengthWcdma
-        
+        val identity = cellInfo.cellIdentity
+        val signal = cellInfo.cellSignalStrength
         val (operatorName, operatorCode) = getOperatorInfo()
-        
+
         return CellTowerRecord(
             timestamp = System.currentTimeMillis(),
             lac = identity.lac,
@@ -237,22 +155,18 @@ class CellInfoProvider(private val context: Context) {
             cipherAlgorithm = "A5/3"
         )
     }
-    
-    /**
-     * Parse 5G NR cell information.
-     */
+
     private fun parseNrCell(cellInfo: CellInfoNr): CellTowerRecord {
         val identity = cellInfo.cellIdentity as CellIdentityNr
         val signal = cellInfo.cellSignalStrength as CellSignalStrengthNr
-        
         val (operatorName, operatorCode) = getOperatorInfo()
-        
+
         return CellTowerRecord(
             timestamp = System.currentTimeMillis(),
             nrArfcn = identity.nrarfcn,
             nrPci = identity.pci,
             ssRsrp = signal.dbm,
-            ssRsrq = signal.getSsRsrq() ?: 0,
+            ssRsrq = signal.ssRsrq,
             signalStrength = signal.dbm,
             signalLevel = signal.level,
             networkType = "NR",

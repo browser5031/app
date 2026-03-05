@@ -1,20 +1,15 @@
 package com.imsidetector
 
 import android.app.Application
-import android.util.Log
+import timber.log.Timber
 
-/**
- * Minimal Application class - no Realm, no Timber, just basics
- */
 class IMSIDetectorApplication : Application() {
-    
-    companion object {
-        private const val TAG = "IMSIDetectorApp"
-    }
-    
+
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "Application started - minimal version")
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        }
+        Timber.d("IMSI Detector Application started")
     }
 }
-

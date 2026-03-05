@@ -1,7 +1,6 @@
 plugins {
     id("com.android.application")
     kotlin("android")
-    kotlin("kapt")
 }
 
 android {
@@ -67,25 +66,12 @@ dependencies {
     // Jetpack Navigation
     implementation("androidx.navigation:navigation-compose:2.7.6")
 
-    // Telephony APIs are built into Android SDK (no separate dependency needed)
-
     // Location
     implementation("com.google.android.gms:play-services-location:21.1.0")
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
-
-    // Realm Database
-    implementation("io.realm.kotlin:library-base:1.13.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-
-    // WorkManager
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
-
-    // Retrofit for API calls
-    implementation("com.squareup.retrofit2:retrofit:2.10.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.10.0")
 
     // Logging
     implementation("com.jakewharton.timber:timber:5.0.1")
